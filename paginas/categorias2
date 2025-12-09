@@ -1,0 +1,211 @@
+# -*- coding: utf-8 -*-
+import streamlit as st
+import pandas as pd
+from datetime import date, timedelta, datetime
+import math
+from funcoes_compartilhadas.conversa_banco import select, insert, update, delete
+from funcoes_compartilhadas.cria_id import cria_id
+
+# ───────────────────────────────────────────────────────────────────────────────
+# CONFIGURAÇÕES BÁSICAS
+# ───────────────────────────────────────────────────────────────────────────────
+def app(TABELA):
+    TABELA = "Porangatu"
+
+TIPOS_COLUNAS = {
+    "ID": "id",
+    "Data de Protocolo": "data",
+    "Nº de Protocolo": "texto",
+    "Tipo de Serviço": "texto",
+    "CPF/CNPJ": "texto",
+    "Nome Fantasia": "texto",
+    "Área (m²)": "numero",
+    "Valor Total": "numero100",
+    "Validade do Boleto": "data",
+    "Validade do Cercon": "data",
+    "Prazo de Vistoria": "numero",
+    "Contato": "texto",
+    "Militar Responsável": "texto",
+    "Andamento": "texto"
+}
+
+# ───────────────────────────────────────────────────────────────────────────────
+# FUNÇÕES AUXILIARES
+# ───────────────────────────────────────────────────────────────────────────────
+def sanitize_number(value, default=0.0):
+    try:
+        if isinstance(value, str):
+            value = value.replace(",", ".").strip()
+        value = float(value)
+        if math.isnan(value):
+            return default
+        return value
+    except (ValueError, TypeError):
+        return default
+
+
+def calcular_vistoria(area: float) -> float:
+    VALOR_BASE = 150.35
+    LIMITE_AREA = 100
+    VALOR_EXCEDENTE = 0.22
+    if area <= LIMITE_AREA:
+        return VALOR_BASE
+    excedente = area - LIMITE_AREA
+    return round(VALOR_BASE + excedente * VALOR_EXCEDENTE, 2)
+
+
+def carregar_dados():
+    df = select(TABELA, TIPOS_COLUNAS)
+    return pd.DataFrame(df)
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# FORMULÁRIO PADRÃO USADO EM CADASTRO E EDIÇÃO
+# ───────────────────────────────────────────────────────────────────────────────
+def formulario_protocolo(dados=None, prefix=""):
+    if dados is None:
+        dados = {
+            "Data de Protocolo": date.today().strftime("%d/%m/%Y"),
+            "Nº de Protocolo": "",
+            "Tipo de Serviço": "Vistoria para Funcionamento",
+            "CPF/CNPJ": "",
+            "Nome Fantasia": "",
+            "Área (m²)": 0.0,
+            "Valor Total": 0.0,
+            "Validade do Boleto": (date.today() + timedelta(days=30)).strftime("%d/%m/%Y"),
+            "Validade do Cercon": (date.today() + timedelta(days=365)).strftime("%d/%m/%Y"),
+            "Prazo de Vistoria": 30,
+            "Contato": "",
+            "Militar Responsável": "Asp Of D'Lauan",
+            "Andamento": "Boleto Impresso"
+        }
+
+    col1, col2 = st.columns(2)
+    with col1:
+        data_raw = st.text_input("Data de Protocolo (dd/mm/aaaa)", value=dados["Data de Protocolo"], key=f"data_{prefix}")
+        protocolo = st.text_input("Nº de Protocolo", value=dados["Nº de Protocolo"], key=f"prot_{prefix}")
+        tipo = st.selectbox("Tipo de Serviço", [
+            "Vistoria para Funcionamento",
+            "Licenciamento Facilitado",
+            "Análise de Projeto",
+            "Substituição de Projeto"
+        ], index=0, key=f"tipo_{prefix}")
+        cpf = st.text_input("CPF/CNPJ", value=dados["CPF/CNPJ"], key=f"cpf_{prefix}")
+        nome = st.text_input("Nome Fantasia", value=dados["Nome Fantasia"], key=f"nome_{prefix}")
+        area = st.number_input("Área (m²)", min_value=0.0, format="%.2f", value=float(dados["Área (m²)"]), key=f"area_{prefix}")
+        valor = st.number_input("Valor Total (R$)", min_value=0.0, format="%.2f", value=float(dados["Valor Total"]), key=f"valor_{prefix}")
+
+    with col2:
+        validade_boleto = st.text_input("Validade do Boleto (dd/mm/aaaa)", value=dados["Validade do Boleto"], key=f"valboleto_{prefix}")
+        validade_cercon = st.text_input("Validade do Cercon (dd/mm/aaaa)", value=dados["Validade do Cercon"], key=f"valcercon_{prefix}")
+        prazo_vistoria = st.number_input("Prazo de Vistoria (dias)", min_value=0, max_value=30, value=int(dados["Prazo de Vistoria"]), key=f"prazo_{prefix}")
+        contato = st.text_input("Contato", value=dados["Contato"], key=f"cont_{prefix}")
+        militar = st.selectbox("Militar Responsável", [
+            "Asp Of D'Lauan", "2° Sgt Tamilla", "2° Sgt Ribeiro", "2° Sgt Éderson"
+        ], index=0, key=f"mil_{prefix}")
+        andamento = st.selectbox("Andamento", [
+            "Boleto Impresso", "Boleto Entregue", "Boleto Pago",
+            "Isento", "MEI", "Processo Expirado", "Empresa Encerrou",
+            "Cercon Impresso", "Empresa Não Encontrada"
+        ], index=0, key=f"and_{prefix}")
+
+    return {
+        "Data de Protocolo": data_raw,
+        "Nº de Protocolo": protocolo,
+        "Tipo de Serviço": tipo,
+        "CPF/CNPJ": cpf,
+        "Nome Fantasia": nome,
+        "Área (m²)": area,
+        "Valor Total": valor,
+        "Validade do Boleto": validade_boleto,
+        "Validade do Cercon": validade_cercon,
+        "Prazo de Vistoria": prazo_vistoria,
+        "Contato": contato,
+        "Militar Responsável": militar,
+        "Andamento": andamento
+    }
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# INTERFACE PRINCIPAL
+# ───────────────────────────────────────────────────────────────────────────────
+def app():
+    st.title("📂 Gerenciamento de Protocolos - CBMGO")
+
+    # Força o idioma do navegador para PT-BR
+    st.markdown("""
+        <script>
+        const lang = document.documentElement.lang;
+        if (!lang || lang !== "pt-BR") {
+            document.documentElement.lang = "pt-BR";
+        }
+        </script>
+    """, unsafe_allow_html=True)
+
+    df = carregar_dados()
+
+    termo = st.text_input("🔎 Buscar protocolo (por nome, CPF, militar, tipo...)")
+    if termo:
+        termo = termo.lower()
+        df = df[df.apply(lambda r: termo in str(r.values).lower(), axis=1)]
+
+    # ───────────────────────────────────────────────────────────────
+    # 1️⃣ CADASTRAR NOVO PROTOCOLO
+    # ───────────────────────────────────────────────────────────────
+    with st.expander("➕ Cadastrar Novo Protocolo", expanded=False):
+        dados_novos = formulario_protocolo(prefix="novo")
+
+        if st.button("💾 Salvar Novo Protocolo"):
+            try:
+                data_protocolo = datetime.strptime(dados_novos["Data de Protocolo"], "%d/%m/%Y").date()
+                validade_boleto = datetime.strptime(dados_novos["Validade do Boleto"], "%d/%m/%Y").date()
+                validade_cercon = datetime.strptime(dados_novos["Validade do Cercon"], "%d/%m/%Y").date()
+            except ValueError:
+                st.error("❌ Uma das datas está em formato inválido. Use dd/mm/aaaa.")
+                st.stop()
+
+            novo = {
+                "ID": cria_id(),
+                "Data de Protocolo": data_protocolo.strftime("%d/%m/%Y"),
+                "Nº de Protocolo": dados_novos["Nº de Protocolo"],
+                "Tipo de Serviço": dados_novos["Tipo de Serviço"],
+                "CPF/CNPJ": dados_novos["CPF/CNPJ"],
+                "Nome Fantasia": dados_novos["Nome Fantasia"],
+                "Área (m²)": dados_novos["Área (m²)"],
+                "Valor Total": dados_novos["Valor Total"],
+                "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
+                "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
+                "Prazo de Vistoria": dados_novos["Prazo de Vistoria"],
+                "Contato": dados_novos["Contato"],
+                "Militar Responsável": dados_novos["Militar Responsável"],
+                "Andamento": dados_novos["Andamento"]
+            }
+            insert(TABELA, novo)
+            st.success("✅ Novo protocolo salvo com sucesso!")
+            st.rerun()
+
+    # ───────────────────────────────────────────────────────────────
+    # 2️⃣ PROTOCOLOS EXISTENTES
+    # ───────────────────────────────────────────────────────────────
+    st.divider()
+    st.subheader(f"📋 Protocolos Encontrados: {len(df)}")
+
+    if df.empty:
+        st.info("Nenhum protocolo encontrado.")
+    else:
+        for _, row in df.iterrows():
+            with st.expander(f"🧾 {row['Nº de Protocolo']} - {row['Nome Fantasia']}"):
+                dados = formulario_protocolo(row, prefix=row["ID"])
+
+                if st.button("💾 Atualizar", key=f"btn_{row['ID']}"):
+                    try:
+                        datetime.strptime(dados["Data de Protocolo"], "%d/%m/%Y")
+                        datetime.strptime(dados["Validade do Boleto"], "%d/%m/%Y")
+                        datetime.strptime(dados["Validade do Cercon"], "%d/%m/%Y")
+                    except ValueError:
+                        st.error("❌ Uma das datas está em formato inválido. Use dd/mm/aaaa.")
+                        st.stop()
+
+                    update(TABELA, row["ID"], dados)
+                    st.success("✅ Protocolo atualizado com sucesso!")
+                    st.rerun()
