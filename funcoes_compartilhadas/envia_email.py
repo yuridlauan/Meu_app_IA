@@ -1,7 +1,7 @@
 # funcoes_compartilhadas/envia_email.py
 import smtplib
 from email.mime.text import MIMEText
-from credenciais import gmail
+import streamlit as st
 
 def enviar_email(destino: str, assunto: str, mensagem: str, html: bool = False) -> bool:
     """
@@ -14,8 +14,8 @@ def enviar_email(destino: str, assunto: str, mensagem: str, html: bool = False) 
     - html: define se o conteúdo será tratado como HTML (True) ou texto puro (False)
     """
     try:
-        remetente = gmail.usuario
-        senha_app = gmail.senhaapp
+        remetente = meuappcomiasenha@gmail.com  
+        senha_app = uylqimevkhatmarb
 
         # Define o tipo da mensagem
         tipo = "html" if html else "plain"
