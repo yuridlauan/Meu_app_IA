@@ -24,18 +24,30 @@ from funcoes_compartilhadas.cria_id import cria_id   # ⬅️ novo
 # ===================================================
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
 # ===================================================
-CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit?gid=0#gid=0"
+import json
+
+# ===================================================
+# 🔐 CREDENCIAIS VIA STREAMLIT SECRETS
+# ===================================================
+
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit"
 
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
 
+# Carrega credenciais do painel Secrets do Streamlit
+credenciais_json = json.loads(st.secrets["gdrive_credenciais"])
+
+# Cria credencial segura sem arquivo físico
 _gc = gspread.authorize(
-    Credentials.from_service_account_file(CAMINHO_CREDENCIAL, scopes=_scopes)
+    Credentials.from_service_account_info(credenciais_json, scopes=_scopes)
 )
+
+# Abre a planilha
 _sheet = _gc.open_by_url(URL_PLANILHA)
+
 
 # ===================================================
 # ❗❗ RETENTATIVAS API

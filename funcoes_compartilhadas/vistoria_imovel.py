@@ -1,124 +1,263 @@
 # -*- coding: utf-8 -*-
-import streamlit as st
+"""
+Camada de acesso Google Sheets ↔ Pandas (GENÉRICA).
+
+Escala numérica controlada por TIPOS_COLUNAS:
+    - "numero"     → grava e lê como está
+    - "numero100"  → grava ×100, lê ÷100
+    - "id", "texto", "data" não sofrem ajuste
+
+Quer trocar para MySQL? Basta reimplementar:
+    → select, insert, update, delete
+mantendo os mesmos parâmetros.
+"""
+
 import pandas as pd
-from datetime import date, timedelta
+import gspread
+from google.oauth2.service_account import Credentials
+import streamlit as st
+import time
+from functools import wraps
+from gspread.exceptions import APIError
+from funcoes_compartilhadas.cria_id import cria_id   # ⬅️ novo
 
-from paginas.protocolos import formulario_protocolo, TIPOS_COLUNAS
-from funcoes_compartilhadas.conversa_banco import select, update, delete
+# ===================================================
+# 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
+# ===================================================
+CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit?gid=0#gid=0"
 
+_scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
 
-# ---------------------------------------------------------
-# LISTAR PROTOCOLOS EM UMA ABA
-# ---------------------------------------------------------
-def listar_protocolos(df_filtrado, TABELA, contexto):
+_gc = gspread.authorize(
+    Credentials.from_service_account_file(CAMINHO_CREDENCIAL, scopes=_scopes)
+)
+_sheet = _gc.open_by_url(URL_PLANILHA)
 
-    if df_filtrado.empty:
-        st.info("Nenhum protocolo nesta categoria.")
-        return
+# ===================================================
+# ❗❗ RETENTATIVAS API
+# ===================================================
+def retry_api_error(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        tentativas = 15  # 12×5 s + 3 extras
+        with st.spinner("⏳ Aguardando servidor..."):
+            for _ in range(tentativas):
+                try:
+                    return func(*args, **kwargs)
+                except APIError as e:
+                    if "Quota exceeded" in str(e):
+                        time.sleep(5)
+                    else:
+                        raise e
+        st.error("❌ Falha após múltiplas tentativas devido a limite de requisições.")
+        raise APIError("Falha após múltiplas tentativas devido a quota excedida.")
 
-    for _, row in df_filtrado.iterrows():
-
-        titulo = f"{row['Nº de Protocolo']} — {row['Nome Fantasia']}"
-        cidade = row.get("Cidade", "")
-        if cidade:
-            titulo = f"{cidade} | {titulo}"
-
-        with st.expander(titulo):
-
-            prefix = f"{contexto}_{row['ID']}"
-            dados = formulario_protocolo(row, prefix=prefix)
-
-            confirma_key = f"confirma_{contexto}_{row['ID']}"
-            if confirma_key not in st.session_state:
-                st.session_state[confirma_key] = False
-
-            with st.form(f"form_{contexto}_{row['ID']}"):
-                c1, c2 = st.columns(2)
-                atualizar = c1.form_submit_button("💾 Atualizar")
-                excluir = c2.form_submit_button("🗑️ Excluir")
-
-                if atualizar:
-                    update(
-                        TABELA,
-                        list(dados.keys()),
-                        list(dados.values()),
-                        where=f"ID,eq,{row['ID']}",
-                        tipos_colunas=TIPOS_COLUNAS
-                    )
-                    st.success("Atualizado!")
-                    st.rerun()
-
-                if excluir:
-                    st.session_state[confirma_key] = True
-
-            # Confirmação fora do form
-            if st.session_state.get(confirma_key, False):
-                st.warning("Tem certeza que deseja excluir?")
-                col1, col2 = st.columns(2)
-
-                if col1.button("Confirmar", key=f"del_{contexto}_{row['ID']}"):
-                    delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
-                    st.success("Excluído!")
-                    st.rerun()
-
-                if col2.button("Cancelar", key=f"cancel_{contexto}_{row['ID']}"):
-                    st.session_state[confirma_key] = False
+    return wrapper
 
 
-# ---------------------------------------------------------
-#  PÁGINA PRINCIPAL DO MILITAR
-# ---------------------------------------------------------
-def app(nome_militar, TABELA="Protocolos", admin=False):
+# ===================================================
+# 🔢 AJUSTE DE ESCALA NUMÉRICA
+# ===================================================
+def _scale(df: pd.DataFrame, tipos: dict, modo: str) -> pd.DataFrame:
+    """
+    Ajusta escala e garante tipo numérico nas colunas cujo tipo começa por 'numero'.
 
-    st.title(f"👨‍🚒 Painel de {nome_militar}")
+    • Converte *qualquer* coluna 'numero*' em float.
+    • Para tipo 'numero100':
+        – modo 'mostrar' → divide por 100
+        – modo 'gravar'  → multiplica por 100
+    """
+    df = df.copy()
+    for col, tipo in tipos.items():
+        if col not in df.columns:
+            continue
+        if tipo == "numero100":
+            df[col] = df[col] if modo == "mostrar" else df[col] * 100
+    return df
 
-    df = pd.DataFrame(select(TABELA, TIPOS_COLUNAS))
 
-    if not admin:
-        df = df[df["Militar Responsável"] == nome_militar]
+# ===================================================
+# 🔧 FUNÇÕES AUXILIARES
+# ===================================================
+def _map_cols(df: pd.DataFrame) -> dict:
+    """{coluna_minúscula: Coluna_Original}"""
+    return {c.lower(): c for c in df.columns}
 
+
+# _next_id mantido apenas para compatibilidade, mas não é mais utilizado.
+def _next_id(_):  # deprecated
+    return 0
+
+
+# ===================================================
+# 🟩 SELECT
+# ===================================================
+@retry_api_error
+def select(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
+    ws = _sheet.worksheet(tabela)
+    ws = ws.get_all_records(value_render_option="UNFORMATTED_VALUE")
+    df = pd.DataFrame(ws).rename(columns=str.strip)
+
+    # 🔥 Proteção: se vazio, cria com as colunas certas
     if df.empty:
-        st.info("Nenhum protocolo encontrado.")
-        return
+        df = pd.DataFrame(columns=tipos_colunas.keys())
 
-    df["DataProt_dt"] = pd.to_datetime(
-        df["Data de Protocolo"], dayfirst=True, errors="coerce"
-    )
+    return _scale(df, tipos_colunas, "mostrar")
 
-    hoje = date.today()
-    semana = hoje - timedelta(days=7)
 
-    df_novos = df[df["DataProt_dt"] >= pd.Timestamp(semana)]
+# ===================================================
+# 🟦 INSERT
+# ===================================================
+@retry_api_error
+def insert(tabela: str, dados):
+    ws = _sheet.worksheet(tabela)
 
-    df_atr = df[df["Andamento"].isin(["Boleto Impresso", "Isento", "MEI"])]
-    df_and = df[df["Andamento"].isin(["Boleto Pago", "Boleto Entregue"])]
-    df_conc = df[df["Andamento"].isin(["Cercon Impresso", "Empresa Encerrou"])]
-    df_pend = df[df["Andamento"].isin(["Processo Expirado", "Empresa Não Encontrada"])]
+    # Padroniza entrada
+    if isinstance(dados, pd.DataFrame):
+        dados = dados.to_dict("records")
+    if isinstance(dados, dict):
+        dados = [dados]
 
-    aba_novos, aba_atr, aba_and, aba_conc, aba_pend = st.tabs([
-        f"🆕 Novos (7 dias) ({len(df_novos)})",
-        f"📘 Atribuídos ({len(df_atr)})",
-        f"🟡 Em andamento ({len(df_and)})",
-        f"🟢 Concluídos ({len(df_conc)})",
-        f"🔴 Pendentes ({len(df_pend)})"
-    ])
+    # Adiciona ID automático (string) se não existir
+    for i, item in enumerate(dados, start=1):
+        if not item.get("ID"):
+            item["ID"] = cria_id(sequencia=str(i))
 
-    with aba_novos:
-        listar_protocolos(df_novos, TABELA, "novos")
+    df = pd.DataFrame(dados)
 
-    with aba_atr:
-        listar_protocolos(df_atr, TABELA, "atr")
+    # Cabeçalho (linha 1)
+    header = ws.row_values(1) or list(df.columns)
+    if not ws.row_values(1):
+        ws.insert_row(header, 1)
+    else:
+        for c in df.columns:
+            if c not in header:
+                header.append(c)
+        ws.update("A1", [header])
 
-    with aba_and:
-        listar_protocolos(df_and, TABELA, "and")
+    # Linhas de dados
+    linhas = [[r.get(h, "") for h in header] for r in df.to_dict("records")]
+    ws.insert_rows(linhas, row=len(ws.get_all_values()) + 1)
 
-    with aba_conc:
-        listar_protocolos(df_conc, TABELA, "conc")
 
-    with aba_pend:
-        listar_protocolos(df_pend, TABELA, "pend")
+# ===================================================
+# 🟨 UPDATE
+# ===================================================
+@retry_api_error
+def update(tabela: str, campos: list, valores: list, where: str, tipos_colunas: dict) -> int:
+    ws = _sheet.worksheet(tabela)
+    df = pd.DataFrame(ws.get_all_records()).rename(columns=str.strip)
+    if df.empty:
+        return 0
 
-    if admin:
-        st.divider()
-        st.success("🛡️ Modo administrador ativo")
-        st.caption("Acesso total aos protocolos, independentemente do militar.")
+    df = _scale(df, tipos_colunas, "gravar")
+    col_map = _map_cols(df)
+
+    campo, _, alvo = [s.strip() for s in where.split(",")]
+    real = col_map[campo.lower()]
+
+    if tipos_colunas.get(real) == "numero100":
+        try:
+            alvo = str(float(alvo))
+        except Exception:
+            pass
+
+    linhas = df.index[df[real].astype(str) == str(alvo)]
+    if linhas.empty:
+        return 0
+
+    for lin in linhas:
+        for c, v in zip(campos, valores):
+            real_c = col_map[c.lower()]
+            ws.update_cell(lin + 2, df.columns.get_loc(real_c) + 1, v)
+
+    return len(linhas)
+
+
+# ===================================================
+# 🟥 DELETE
+# ===================================================
+@retry_api_error
+def delete(tabela: str, where: str, tipos_colunas: dict) -> int:
+    ws = _sheet.worksheet(tabela)
+    df = pd.DataFrame(ws.get_all_records()).rename(columns=str.strip)
+    if df.empty:
+        return 0
+
+    df = _scale(df, tipos_colunas, "gravar")
+    col_map = _map_cols(df)
+
+    campo, _, alvo = [s.strip() for s in where.split(",")]
+    real = col_map[campo.lower()]
+
+    if tipos_colunas.get(real) == "numero100":
+        try:
+            alvo = str(float(alvo))
+        except Exception:
+            pass
+
+    linhas = df.index[df[real].astype(str) == str(alvo)]
+    for i in sorted(linhas, reverse=True):
+        ws.delete_rows(i + 2)
+
+    return len(linhas)
+
+    
+def select_all(tipos_colunas):
+    """
+    Lê todas as abas da planilha e retorna um único DataFrame.
+    """
+    import pandas as pd
+
+    planilha = _sheet  # já está aberto no seu código
+
+    dados = []
+
+    for worksheet in planilha.worksheets():
+
+        nome_aba = worksheet.title
+
+        try:
+            df = pd.DataFrame(worksheet.get_all_records())
+
+            if df.empty:
+                continue
+
+            # Garante todas as colunas esperadas
+            for col in tipos_colunas:
+                if col not in df.columns:
+                    df[col] = ""
+
+            df["Cidade"] = nome_aba  # reforça a origem
+            dados.append(df)
+
+        except Exception as e:
+            print(f"Erro lendo aba {nome_aba}: {e}")
+
+    if dados:
+        return pd.concat(dados, ignore_index=True)
+
+    return pd.DataFrame(columns=list(tipos_colunas.keys()))
+
+import pandas as pd
+
+def select_financeiro():
+    import pandas as pd
+
+    ws = _sheet.worksheet("painel_financeiro")
+    dados = ws.get_all_records()
+
+    df = pd.DataFrame(dados)
+
+    colunas = ["Data", "Valor", "Status", "Observação"]
+    for col in colunas:
+        if col not in df.columns:
+            df[col] = ""
+
+    return df
+
+
