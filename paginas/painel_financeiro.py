@@ -58,7 +58,13 @@ def app_financeiro():
     # ----------------------------------------------------
     # CARREGAR DADOS
     # ----------------------------------------------------
-    df = select(TABELA, tipos_colunas={})
+    df = select(TABELA, tipos_colunas={
+    "Data": "data",
+    "Valor": "numero",
+    "Status": "texto",
+    "Observação": "texto"
+})
+
 
     
 
