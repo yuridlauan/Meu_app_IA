@@ -143,6 +143,70 @@ def login():
                         "Nome": df.iloc[0]["Nome"],
                         "Email": df.iloc[0]["Email"],
                     }
+
+                    # ✅ GRAVA COOKIES (SEM DUPLICAR)
+                    cookies["usuario_logado"] = st.session_state["usuario_logado"]["ID"]
+                    cookies["usuario_nome"]   = st.session_state["usuario_logado"]["Nome"]
+                    cookies["usuario_email"]  = st.session_state["usuario_logado"]["Email"]
+
+                    if not st.session_state.get("cookies_salvo"):
+                        cookies.save()
+                        st.session_state["cookies_salvo"] = True
+
+                    st.success(f"✅ Bem-vindo, {df.iloc[0]['Nome']}!")
+                    st.rerun()
+                else:
+                    st.error("❌ Senha incorreta.")
+            else:
+                st.error("❌ Usuário não encontrado.")
+
+        # ─── CSS para centralizar o botão popover ─────────────────
+        st.markdown("""
+            <style>
+            div[data-testid="stPopoverContainer"] > button {
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # ─── Link de redefinição com hover estilizado ─────────────
+        st.markdown("""
+            <style>
+            a.link-esqueci:link,
+            a.link-esqueci:visited {
+                text-decoration: none;
+                color: #777 !important;
+                font-size: 12px;
+                font-weight: normal;
+            }
+
+            a.link-esqueci:hover {
+                color: #1976D2 !important;
+                font-weight: bold;
+            }
+            </style>
+            <div style='text-align:center; margin-top:10px'>
+                <a href='?recuperar=1' class='link-esqueci'>
+                    Esqueci minha senha
+                </a>
+            </div>
+        """, unsafe_allow_html=True)
+
+
+        # ─── Botão Entrar ─────────────────────────────────────────
+        if st.button("Entrar", key="login_botao"):
+            df = conversa_banco.select(TABELA_USUARIOS, TIPOS_USUARIOS)
+            df = df[df["Email"].str.lower() == email.lower()]
+            if not df.empty:
+                senha_hash = hash_senha(senha)
+                if df.iloc[0]["Senha"] == senha_hash:
+                    st.session_state["usuario_logado"] = {
+                        "ID": str(df.iloc[0]["ID"]),
+                        "Nome": df.iloc[0]["Nome"],
+                        "Email": df.iloc[0]["Email"],
+                    }
                     # SALVAR LOGIN NO COOKIE
                     # SALVAR LOGIN NO COOKIE
                     cookies["usuario_logado"] = st.session_state["usuario_logado"]["ID"]
