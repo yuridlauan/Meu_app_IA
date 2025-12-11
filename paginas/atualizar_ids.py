@@ -2,12 +2,16 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import time
+import random
+
 
 # Função para criar ID
+# Função para criar ID com sufixo aleatório para garantir unicidade
 def criar_id():
     agora = datetime.now()
-    return agora.strftime("%Y%m%d_%H%M%S_127001_1")
+    sufixo = random.randint(1000, 9999)
+    return agora.strftime("%Y%m%d_%H%M%S_127001_1") + f"_{sufixo}"
+
 
 # Nome da sua planilha no Google Sheets
 NOME_PLANILHA = "meu banco de dados"
