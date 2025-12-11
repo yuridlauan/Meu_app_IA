@@ -24,7 +24,9 @@ TIPOS_COLUNAS = {
     "Prazo de Vistoria": "numero",
     "Contato": "texto",
     "Militar Responsável": "texto",
-    "Andamento": "texto"
+    "Andamento": "texto",
+    "Cidade": "texto"
+    
 }
 
 # -----------------------------------------------------------
@@ -110,17 +112,27 @@ def formulario_protocolo(dados=None, prefix=""):
             key=f"prot_{prefix}"
         )
 
+        opcoes_tipo = [
+            "Vistoria para Funcionamento",
+            "Licenciamento Facilitado",
+            "Análise de Projeto",
+            "Substituição de Projeto"
+        ]
+
+        # descobre o índice correto com base no que veio do banco
+        tipo_valor = dados.get("Tipo de Serviço", opcoes_tipo[0])
+        if tipo_valor in opcoes_tipo:
+            tipo_index = opcoes_tipo.index(tipo_valor)
+        else:
+            tipo_index = 0  # fallback
+
         tipo = st.selectbox(
             "Tipo de Serviço",
-            [
-                "Vistoria para Funcionamento",
-                "Licenciamento Facilitado",
-                "Análise de Projeto",
-                "Substituição de Projeto"
-            ],
-            index=0,  # você pode mudar se quiser outro padrão
+            opcoes_tipo,
+            index=tipo_index,
             key=f"tipo_{prefix}"
         )
+
 
         cpf = st.text_input("CPF/CNPJ", value=dados["CPF/CNPJ"], key=f"cpf_{prefix}")
         nome = st.text_input("Nome Fantasia", value=dados["Nome Fantasia"], key=f"nome_{prefix}")
@@ -148,7 +160,7 @@ def formulario_protocolo(dados=None, prefix=""):
             "Valor Total (R$)",
             min_value=0.0,
             format="%.2f",
-            value=valor_calculado if prefix == "novo" else float(dados.get("Valor Total", 0.0)),
+            value=valor_calculado if prefix == "novo" else sanitize_number(dados.get("Valor Total", 0.0)),
             key=f"valor_{prefix}"
         )
 
@@ -204,39 +216,96 @@ def formulario_protocolo(dados=None, prefix=""):
 
         contato = st.text_input("Contato", value=dados["Contato"], key=f"cont_{prefix}")
 
+        opcoes_militar = [
+            "Asp Of D'Lauan",
+            "2° Sgt Tamilla",
+            "2° Sgt Ribeiro",
+            "2° Sgt Éderson"
+        ]
+
+        militar_valor = dados.get("Militar Responsável", opcoes_militar[0])
+        if militar_valor in opcoes_militar:
+            militar_index = opcoes_militar.index(militar_valor)
+        else:
+            militar_index = 0
+
         militar = st.selectbox(
             "Militar Responsável",
-            ["Asp Of D'Lauan", "2° Sgt Tamilla", "2° Sgt Ribeiro", "2° Sgt Éderson"],
-            index=0,
+            opcoes_militar,
+            index=militar_index,
             key=f"mil_{prefix}"
         )
 
+
+        opcoes_andamento = [
+            "Boleto Impresso",
+            "Boleto Entregue",
+            "Boleto Pago",
+            "Isento",
+            "MEI",
+            "Processo Expirado",
+            "Empresa Encerrou",
+            "Cercon Impresso",
+            "Empresa Não Encontrada"
+        ]
+
+        andamento_valor = dados.get("Andamento", opcoes_andamento[0])
+        if andamento_valor in opcoes_andamento:
+            andamento_index = opcoes_andamento.index(andamento_valor)
+        else:
+            andamento_index = 0
+
         andamento = st.selectbox(
             "Andamento",
-            [
-                "Boleto Impresso", "Boleto Entregue", "Boleto Pago",
-                "Isento", "MEI", "Processo Expirado", "Empresa Encerrou",
-                "Cercon Impresso", "Empresa Não Encontrada"
-            ],
-            index=0,
+            opcoes_andamento,
+            index=andamento_index,
             key=f"and_{prefix}"
         )
 
+
+        opcoes_cidade = [
+            "Porangatu",
+            "Santa Tereza",
+            "Estrela do Norte",
+            "Formoso",
+            "Trombas",
+            "Novo Planalto",
+            "Montividiu",
+            "Mutunópolis"
+        ]
+
+        cidade_valor = dados.get("Cidade", opcoes_cidade[0])
+        if cidade_valor in opcoes_cidade:
+            cidade_index = opcoes_cidade.index(cidade_valor)
+        else:
+            cidade_index = 0
+
+        cidade = st.selectbox(
+            "Cidade",
+            opcoes_cidade,
+            index=cidade_index,
+            key=f"cid_{prefix}"
+        )
+
+
+
     return {
-        "Data de Protocolo": data_raw,
-        "Nº de Protocolo": protocolo,
-        "Tipo de Serviço": tipo,
-        "CPF/CNPJ": cpf,
-        "Nome Fantasia": nome,
-        "Área (m²)": area,
-        "Valor Total": valor,
-        "Validade do Boleto": validade_boleto,
-        "Validade do Cercon": validade_cercon,
-        "Prazo de Vistoria": prazo_vistoria,
-        "Contato": contato,
-        "Militar Responsável": militar,
-        "Andamento": andamento
-    }
+    "Data de Protocolo": data_raw,
+    "Nº de Protocolo": protocolo,
+    "Tipo de Serviço": tipo,
+    "CPF/CNPJ": cpf,
+    "Nome Fantasia": nome,
+    "Área (m²)": area,
+    "Valor Total": valor,
+    "Validade do Boleto": validade_boleto,
+    "Validade do Cercon": validade_cercon,
+    "Prazo de Vistoria": prazo_vistoria,
+    "Contato": contato,
+    "Militar Responsável": militar,
+    "Andamento": andamento,
+    "Cidade": cidade
+}
+
 
 
 # -----------------------------------------------------------
@@ -283,7 +352,9 @@ def app(TABELA):
                 "Prazo de Vistoria": dados_novos["Prazo de Vistoria"],
                 "Contato": dados_novos["Contato"],
                 "Militar Responsável": dados_novos["Militar Responsável"],
-                "Andamento": dados_novos["Andamento"]
+                "Andamento": dados_novos["Andamento"],
+                "Cidade": dados_novos["Cidade"]
+
             }
             insert(TABELA, novo)
             st.success("✅ Novo protocolo salvo com sucesso!")
@@ -342,14 +413,13 @@ def app(TABELA):
     df_alert = df_all.copy()
     df_alert["Validade_dt"] = pd.to_datetime(df_alert["Validade do Cercon"], format="%d/%m/%Y", errors="coerce")
     df_alert["Boleto_dt"] = pd.to_datetime(df_alert["Validade do Boleto"], format="%d/%m/%Y", errors="coerce")
-    df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"], format="%d/%m/%Y", errors="coerce")
-
+    df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"],format="%d/%m/%Y",dayfirst=True,errors="coerce") 
     hoje = date.today()
     limite_proximo = hoje + timedelta(days=30)
     limite_vencidos = hoje - timedelta(days=365)
 
     # --- Cálculos ---
-    qtd_novos = df_alert[df_alert["DataProt_dt"] == pd.Timestamp(hoje)].shape[0]
+    qtd_novos = df_alert[df_alert["DataProt_dt"].dt.date == hoje].shape[0]
 
     qtd_proximos = df_alert[
         (df_alert["Validade_dt"] >= pd.Timestamp(hoje)) &
@@ -362,8 +432,10 @@ def app(TABELA):
     ].shape[0]
 
     qtd_expirados = df_alert[
-        (df_alert["Boleto_dt"] < pd.Timestamp(hoje))
+    (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
+    (df_alert["Validade_dt"] >= pd.Timestamp(hoje))
     ].shape[0]
+
 
     # --- Construção dos badges ---
     ABA1 = "📋 Protocolos Encontrados"
@@ -578,8 +650,10 @@ def app(TABELA):
 
         # Apenas BOLETO vencido
         df_expirados = df_temp[
-            (df_temp["Boleto_dt"] < pd.Timestamp(hoje))
-        ].sort_values("Boleto_dt")
+                (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &  # boleto vencido
+                (df_temp["Validade_dt"] >= pd.Timestamp(hoje))  # cercon ainda válido
+            ].sort_values("Boleto_dt")
+
 
         if df_expirados.empty:
             st.info("Nenhum processo expirado (boleto vencido)!")
@@ -631,7 +705,7 @@ def app(TABELA):
     # ---------------------------
 # 5️⃣ ABA: NOVOS PROTOCOLOS CADASTRADOS HOJE
 # ---------------------------
-        with aba_novos:
+    with aba_novos:
             st.markdown("### 🆕 Novos Protocolos Cadastrados Hoje")
 
             df_novos = df_temp[
