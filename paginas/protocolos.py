@@ -673,7 +673,7 @@ def app(TABELA):
 
                     if row["Boleto_dt"] < pd.Timestamp(hoje) and row["Validade_dt"] >= pd.Timestamp(hoje):
                         motivo = "Boleto Vencido"
-                    elif dias_desde_protocolo > 150 and "cercon impresso" not in andamento and "encerrou" not in andamento:
+                    elif andamento == "boleto pago" and dias_desde_protocolo > 150:
                         motivo = "Inatividade"
                     else:
                         motivo = "Outro"
