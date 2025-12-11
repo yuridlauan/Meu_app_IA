@@ -22,14 +22,14 @@ ABAS_CIDADES = [
 def app():
     st.title("🔄 Atualizar IDs")
     st.write("Esse processo irá atualizar os IDs ausentes nas abas das cidades.")
-    st.write("🔍 Verificando secrets...")
-    st.write("Conta de serviço:", st.secrets["gdrive_credenciais"]["client_email"])
+    
 
 
     if st.button("🚀 Iniciar Atualização"):
         try:
             # Autenticação usando Streamlit Secrets
-            escopos = ["https://www.googleapis.com/auth/spreadsheets"]
+            escopos = ["https://www.googleapis.com/auth/spreadsheets",
+             "https://www.googleapis.com/auth/drive"]
             credenciais = Credentials.from_service_account_info(
                 st.secrets["gdrive_credenciais"],
                 scopes=escopos
