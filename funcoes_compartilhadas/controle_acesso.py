@@ -144,14 +144,17 @@ def login():
                         "Email": df.iloc[0]["Email"],
                     }
 
-                    # ✅ GRAVA COOKIES (SEM DUPLICAR)
+                    # ✅ GRAVA COOKIES COM SEGURANÇA
                     cookies["usuario_logado"] = st.session_state["usuario_logado"]["ID"]
                     cookies["usuario_nome"]   = st.session_state["usuario_logado"]["Nome"]
                     cookies["usuario_email"]  = st.session_state["usuario_logado"]["Email"]
 
                     if not st.session_state.get("cookies_salvo"):
-                        cookies.save()
-                        st.session_state["cookies_salvo"] = True
+                        try:
+                            cookies.save()
+                            st.session_state["cookies_salvo"] = True
+                        except Exception:
+                            pass  # evita erro de chave duplicada
 
                     st.success(f"✅ Bem-vindo, {df.iloc[0]['Nome']}!")
                     st.rerun()
@@ -193,6 +196,7 @@ def login():
                 </a>
             </div>
         """, unsafe_allow_html=True)
+
 
 
         # ─── Botão Entrar ─────────────────────────────────────────
