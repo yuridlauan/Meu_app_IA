@@ -646,17 +646,24 @@ def app(TABELA):
 # 4️⃣ ABA: PROCESSOS EXPIRADOS (critério único: boleto vencido)
 # ---------------------------
     with aba_exp:
-        st.markdown("### ⚠️ Processos Expirados (Boleto Vencido)")
+        st.markdown("### ⚠️ Processos Expirados (Boleto venceu ou inatividade > 120 dias)")
 
         # Apenas BOLETO vencido
         df_expirados = df_temp[
-                (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &  # boleto vencido
-                (df_temp["Validade_dt"] >= pd.Timestamp(hoje))  # cercon ainda válido
-            ].sort_values("Boleto_dt")
+            (
+                (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
+                (df_temp["Validade_dt"] >= pd.Timestamp(hoje))
+            ) |
+            (
+                (df_temp["Andamento"] == "Boleto Pago") &
+                (df_temp["DataProt_dt"] < pd.Timestamp(hoje - timedelta(days=150)))
+            )
+        ].sort_values("DataProt_dt", ascending=False)
+
 
 
         if df_expirados.empty:
-            st.info("Nenhum processo expirado (boleto vencido)!")
+            st.info("Nenhum processo expirado (boleto vencido ou inatividade)!")
         else:
             for _, row in df_expirados.iterrows():
 
