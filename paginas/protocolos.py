@@ -649,8 +649,10 @@ def app(TABELA):
 
         # Apenas BOLETO vencido
         df_expirados = df_temp[
-            (df_temp["Boleto_dt"] < pd.Timestamp(hoje))
-        ].sort_values("Boleto_dt")
+                (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &  # boleto vencido
+                (df_temp["Validade_dt"] >= pd.Timestamp(hoje))  # cercon ainda válido
+            ].sort_values("Boleto_dt")
+
 
         if df_expirados.empty:
             st.info("Nenhum processo expirado (boleto vencido)!")
