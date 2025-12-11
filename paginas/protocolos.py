@@ -116,7 +116,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Vistoria para Funcionamento",
             "Licenciamento Facilitado",
             "Análise de Projeto",
-            "Substituição de Projeto"
+            "Substituição de Projeto", 
+            "Ponto de Referência"
         ]
 
         # descobre o índice correto com base no que veio do banco
