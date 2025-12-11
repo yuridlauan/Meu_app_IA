@@ -28,7 +28,7 @@ def app():
             # Autenticação usando Streamlit Secrets
             escopos = ["https://www.googleapis.com/auth/spreadsheets"]
             credenciais = Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"],
+                st.secrets["gdrive_credenciais"],
                 scopes=escopos
             )
             cliente = gspread.authorize(credenciais)
