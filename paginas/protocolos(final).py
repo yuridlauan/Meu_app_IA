@@ -100,11 +100,8 @@ def formulario_protocolo(dados=None, prefix=""):
 
     # -------- COLUNA 1 --------
     with col1:
-        data_raw = st.text_input(
-            "Data de Protocolo (dd/mm/aaaa)",
-            value=dados["Data de Protocolo"],
-            key=f"data_{prefix}"
-        )
+        data_protocolo_dt = st.date_input("Data de Protocolo", value=datetime.strptime(dados["Data de Protocolo"], "%d/%m/%Y").date())
+        data_protocolo_str = data_protocolo_dt.strftime("%d/%m/%Y")
 
         protocolo = st.text_input(
             "Nº de Protocolo",
