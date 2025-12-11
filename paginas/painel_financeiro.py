@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from funcoes_compartilhadas.conversa_banco import select_financeiro, insert,delete
+from funcoes_compartilhadas.conversa_banco import select, insert, delete
 
 
-TABELA = "financeiro"
+TABELA = "painel_financeiro"
 
 
 def gerar_pdf(df, mes, total, comparacao):
@@ -58,7 +58,8 @@ def app_financeiro():
     # ----------------------------------------------------
     # CARREGAR DADOS
     # ----------------------------------------------------
-    df = select_financeiro()
+    df = select(TABELA, tipos_colunas={})
+
     
 
 
@@ -198,7 +199,7 @@ def app_financeiro():
             obs_sel = partes[2]
 
             delete(
-                "painel_financeiro",
+                TABELA,
                 where=f"Data,=,{data_sel}",
                 tipos_colunas={}  # não tem escala aqui
             )
@@ -245,7 +246,7 @@ def app_financeiro():
     obs = st.text_input("Observação")
 
     if st.button("Salvar Receita"):
-        insert("painel_financeiro", {
+        insert(TABELA, {
             "Data": data.strftime("%d/%m/%Y"),
             "Valor": valor,
             "Status": "Recebido",
