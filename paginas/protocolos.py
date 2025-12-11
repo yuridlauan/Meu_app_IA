@@ -433,8 +433,10 @@ def app(TABELA):
     ].shape[0]
 
     qtd_expirados = df_alert[
-        (df_alert["Boleto_dt"] < pd.Timestamp(hoje))
+    (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
+    (df_alert["Validade_dt"] >= pd.Timestamp(hoje))
     ].shape[0]
+
 
     # --- Construção dos badges ---
     ABA1 = "📋 Protocolos Encontrados"
