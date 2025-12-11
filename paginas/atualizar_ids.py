@@ -54,9 +54,11 @@ def app():
                 atualizacoes = []
 
                 for i, linha in enumerate(dados):
-                    if not ids[i + 1].strip():  # +1 para ignorar cabeçalho
+                    id_valor = ids[i + 1] if i + 1 < len(ids) else ''
+                    if not id_valor.strip():
                         novo_id = criar_id()
                         atualizacoes.append((i + 2, novo_id))  # +2 para linha real da planilha
+                # +2 para linha real da planilha
 
                 for linha_idx, novo_id in atualizacoes:
                     aba.update_cell(linha_idx, 1, novo_id)  # coluna 1 = A
