@@ -413,7 +413,10 @@ def app(TABELA):
     df_alert = df_all.copy()
     df_alert["Validade_dt"] = pd.to_datetime(df_alert["Validade do Cercon"], format="%d/%m/%Y", errors="coerce")
     df_alert["Boleto_dt"] = pd.to_datetime(df_alert["Validade do Boleto"], format="%d/%m/%Y", errors="coerce")
-    df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"], format="%d/%m/%Y", errors="coerce")
+    df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"],dayfirst=True,errors="coerce")
+    st.write("🔍 TESTE DE DATAS — Verifique se DataProt_dt está convertendo corretamente:")
+    st.write(df_alert[["Data de Protocolo", "DataProt_dt"]])
+
 
     hoje = date.today()
     limite_proximo = hoje + timedelta(days=30)
