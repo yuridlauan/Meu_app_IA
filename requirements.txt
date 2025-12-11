@@ -103,5 +103,6 @@ validators==0.35.0
 watchdog==6.0.0
 streamlit-cookies-manager
 reportlab
+oauth2client
 
 
