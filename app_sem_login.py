@@ -5,6 +5,8 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
+from paginas import atualizar_ids
+
 
 # 🔄 Garante que o buffer de inserções sempre exista
 if "__buffer_inseridos__" not in st.session_state:
@@ -108,7 +110,8 @@ PAGINAS = {
         "cadastro_menus": "Cadastro de Menus",
         "cadastro_funcionalidades": "Cadastro de Funcionalidades",
         "cadastro_permissoes": "Cadastro de Permissões",
-        "painel_financeiro": "Painel Financeiro"
+        "painel_financeiro": "Painel Financeiro",
+        "Atualizar IDs": atualizar_ids.app
     }
 }
 

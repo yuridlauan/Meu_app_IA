@@ -3,6 +3,8 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
+from paginas import atualizar_ids
+
 
 @st.cache_data
 def carregar_menus():
