@@ -667,48 +667,58 @@ def app(TABELA):
             st.info("Nenhum processo expirado (boleto vencido ou inatividade)!")
         else:
             for _, row in df_expirados.iterrows():
+                # Determinar o motivo da expiração
+                    dias_desde_protocolo = (hoje - row["DataProt_dt"].date()).days if pd.notna(row["DataProt_dt"]) else 0
+                    andamento = str(row.get("Andamento", "")).strip().lower()
 
-                with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']}", expanded=False):
+                    if row["Boleto_dt"] < pd.Timestamp(hoje) and row["Validade_dt"] >= pd.Timestamp(hoje):
+                        motivo = "Boleto Vencido"
+                    elif dias_desde_protocolo > 150 and "cercon impresso" not in andamento and "encerrou" not in andamento:
+                        motivo = "Inatividade"
+                    else:
+                        motivo = "Outro"
 
-                    dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
+                    with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})", expanded=False):
 
-                    confirma_key = f"confirma_exclusao_exp_{row['ID']}"
-                    if confirma_key not in st.session_state:
-                        st.session_state[confirma_key] = False
+                        dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
 
-                    with st.form(key=f"form_exp_{row['ID']}"):
-                        col1, col2 = st.columns(2)
-                        atualizar = col1.form_submit_button("💾 Atualizar")
-                        excluir = col2.form_submit_button("🗑️ Excluir")
-
-                        if atualizar:
-                            update(
-                                TABELA,
-                                list(dados.keys()),
-                                list(dados.values()),
-                                where=f"ID,eq,{row['ID']}",
-                                tipos_colunas=TIPOS_COLUNAS
-                            )
-                            st.success("Atualizado!")
-                            st.rerun()
-
-                        if excluir:
-                            st.session_state[confirma_key] = True
-
-                    # Confirmação de exclusão
-                    if st.session_state.get(confirma_key, False):
-                        st.warning("Confirma exclusão?")
-                        col_c1, col_c2 = st.columns(2)
-
-                        confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"del_exp_{row['ID']}")
-                        cancela = col_c2.button("Cancelar", key=f"cancela_exp_{row['ID']}")
-
-                        if confirma:
-                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
-                            st.success("Excluído!")
-                            st.rerun()
-                        elif cancela:
+                        confirma_key = f"confirma_exclusao_exp_{row['ID']}"
+                        if confirma_key not in st.session_state:
                             st.session_state[confirma_key] = False
+
+                        with st.form(key=f"form_exp_{row['ID']}"):
+                            col1, col2 = st.columns(2)
+                            atualizar = col1.form_submit_button("💾 Atualizar")
+                            excluir = col2.form_submit_button("🗑️ Excluir")
+
+                            if atualizar:
+                                update(
+                                    TABELA,
+                                    list(dados.keys()),
+                                    list(dados.values()),
+                                    where=f"ID,eq,{row['ID']}",
+                                    tipos_colunas=TIPOS_COLUNAS
+                                )
+                                st.success("Atualizado!")
+                                st.rerun()
+
+                            if excluir:
+                                st.session_state[confirma_key] = True
+
+                        # Confirmação de exclusão
+                        if st.session_state.get(confirma_key, False):
+                            st.warning("Confirma exclusão?")
+                            col_c1, col_c2 = st.columns(2)
+
+                            confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"del_exp_{row['ID']}")
+                            cancela = col_c2.button("Cancelar", key=f"cancela_exp_{row['ID']}")
+
+                            if confirma:
+                                delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
+                                st.success("Excluído!")
+                                st.rerun()
+                            elif cancela:
+                                st.session_state[confirma_key] = False
 
     # ---------------------------
 # 5️⃣ ABA: NOVOS PROTOCOLOS CADASTRADOS HOJE
