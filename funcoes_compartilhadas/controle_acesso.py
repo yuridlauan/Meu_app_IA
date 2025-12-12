@@ -17,12 +17,15 @@ import base64
 from io import BytesIO
 
 def get_cookies():
-    from streamlit_cookies_manager import EncryptedCookieManager
+    if "cookies" not in st.session_state:
+        from streamlit_cookies_manager import EncryptedCookieManager
 
-    cookies = EncryptedCookieManager(
-        prefix="meu_app",
-        password="troque_essa_senha_por_algo_secreto"
-    )
+        st.session_state["cookies"] = EncryptedCookieManager(
+            prefix="meu_app",
+            password="troque_essa_senha_por_algo_secreto"
+        )
+
+    cookies = st.session_state["cookies"]
 
     if not cookies.ready():
         try:
@@ -32,7 +35,6 @@ def get_cookies():
             return None
 
     return cookies
-
 
 
 

@@ -4,6 +4,8 @@ import importlib
 import sys
 import streamlit.components.v1 as components
 from paginas import atualizar_ids
+from funcoes_compartilhadas.controle_acesso import get_cookies
+
 
 
 @st.cache_data
