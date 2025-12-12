@@ -110,19 +110,24 @@ def mudar_pagina(alvo: str) -> None:
 # ────────────── LOGIN ──────────────
 # RESTAURA LOGIN A PARTIR DO COOKIE
 # 🔐 DESATIVA COMPLETAMENTE LOGIN AUTOMÁTICO VIA COOKIES
-from funcoes_compartilhadas.controle_acesso import cookies
+
 
 # Se não houver usuário logado, garante que nenhum cookie irá logar automaticamente
+from funcoes_compartilhadas.controle_acesso import get_cookies
+
 if "usuario_logado" not in st.session_state:
-    for key in ["usuario_logado", "usuario_nome", "usuario_email"]:
+    cookies = get_cookies()
+    if cookies:
+        for key in ["usuario_logado", "usuario_nome", "usuario_email"]:
+            try:
+                cookies.delete(key)
+            except:
+                pass
         try:
-            cookies.delete(key)
+            cookies.save()
         except:
             pass
-    try:
-        cookies.save()
-    except:
-        pass
+
 
 
 if not usuario_logado():
