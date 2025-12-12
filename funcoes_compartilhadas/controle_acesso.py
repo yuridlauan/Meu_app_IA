@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Controle de Acesso Genérico
+Controle de Acesso Genérico (Streamlit Cloud Friendly)
 - Login
 - Logout
 - Cadastro de Usuário
 - Cadastro de Permissões
 - Verificação de Acesso
+
+❌ Sem cookies
+✅ Apenas session_state
 """
 
 import streamlit as st
@@ -16,29 +19,8 @@ from PIL import Image
 import base64
 from io import BytesIO
 
-def get_cookies():
-    if "cookies" not in st.session_state:
-        from streamlit_cookies_manager import EncryptedCookieManager
-
-        st.session_state["cookies"] = EncryptedCookieManager(
-            prefix="meu_app",
-            password="troque_essa_senha_por_algo_secreto"
-        )
-
-    cookies = st.session_state["cookies"]
-
-    if not cookies.ready():
-        try:
-            cookies.load()
-        except:
-            st.warning("Não foi possível carregar cookies.")
-            return None
-
-    return cookies
-
-
-
-# imagem
+# ──────────────────────────────────────────────────────────────────────────────
+# 🖼️ Imagem em base64
 def image_base64(path):
     img = Image.open(path)
     buffer = BytesIO()
@@ -47,6 +29,7 @@ def image_base64(path):
     return f"data:image/png;base64,{b64}"
 
 
+# ──────────────────────────────────────────────────────────────────────────────
 # 🔐 Tabelas usadas no Google Sheets
 TABELA_USUARIOS = "usuarios"
 TABELA_PERMISSOES = "permissoes"
@@ -61,8 +44,7 @@ TIPOS_USUARIOS = {
 TIPOS_PERMISSOES = {
     "ID": "id",
     "ID_Usuario": "texto",
-    "Programa": "texto",
-    "Caminho": "texto",
+    "ID_Funcionalidade": "texto",
 }
 
 
@@ -73,59 +55,31 @@ def hash_senha(senha: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 🚪 Login
-# ──────────────────────────────────────────────────────────────────────────────
-
+# 🚪 LOGIN
 def login():
-    from funcoes_compartilhadas.envia_email import enviar_email
-    import random, string
-
-    cookies = get_cookies()  # ✅ Correto agora
-    if cookies is None:
-        return
-
     col1, col2, col3 = st.columns([0.35, 0.3, 0.35])
 
     with col2:
-        # ─── Logo ────────────────────────────────────────────────
+        # Logo
         logo_data = image_base64("imagens/logo.png")
         st.markdown(
             f"""
-            <div style="text-align: center;">
+            <div style="text-align:center;">
                 <img src="{logo_data}" style="width:70%; max-width:240px; margin-bottom:40px" />
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        # ─── Título ───────────────────────────────────────────────
-        st.markdown("<h3 style='text-align:center; color:#444;'>Entre no Sistema</h3>", unsafe_allow_html=True)
+        st.markdown(
+            "<h3 style='text-align:center; color:#444;'>Entre no Sistema</h3>",
+            unsafe_allow_html=True
+        )
 
-        # ─── Campos ───────────────────────────────────────────────
         email = st.text_input("Email", key="login_email")
         senha = st.text_input("Senha", type="password", key="login_senha")
 
-        # ─── CSS do campo senha ───────────────────────────────────
-        st.markdown("""
-            <style>
-            div[data-testid="stTextInput"] > div:first-child {
-                position: relative !important;
-            }
-            div[data-testid="stTextInput"] svg {
-                position: absolute !important;
-                right: 12px !important;
-                top: 2.5em !important;
-                transform: none !important;
-                z-index: 2;
-                pointer-events: none;
-            }
-            input[type="password"] {
-                padding-right: 2.5rem !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # ─── CSS do botão Entrar ──────────────────────────────────
+        # CSS botão
         st.markdown("""
             <style>
             div[data-testid="stButton"] > button {
@@ -137,92 +91,49 @@ def login():
                 padding:6px 20px;
                 border:none;
                 border-radius:5px;
-                transition: background-color 0.2s ease;
             }
             div[data-testid="stButton"] > button:hover {
-                background-color: #388E3C;
-                color: white;
+                background-color:#388E3C;
             }
             </style>
         """, unsafe_allow_html=True)
 
-        # ─── Botão Entrar ─────────────────────────────────────────
         if st.button("Entrar", key="login_botao"):
             df = conversa_banco.select(TABELA_USUARIOS, TIPOS_USUARIOS)
             df = df[df["Email"].str.lower() == email.lower()]
-            if not df.empty:
-                senha_hash = hash_senha(senha)
-                if df.iloc[0]["Senha"] == senha_hash:
-                    st.session_state["usuario_logado"] = {
-                        "ID": str(df.iloc[0]["ID"]),
-                        "Nome": df.iloc[0]["Nome"],
-                        "Email": df.iloc[0]["Email"],
-                    }
 
-                    # ✅ GRAVA COOKIES COM SEGURANÇA
-                    cookies["usuario_logado"] = st.session_state["usuario_logado"]["ID"]
-                    cookies["usuario_nome"]   = st.session_state["usuario_logado"]["Nome"]
-                    cookies["usuario_email"]  = st.session_state["usuario_logado"]["Email"]
-
-                    if not st.session_state.get("cookies_salvo"):
-                        try:
-                            cookies.save()
-                            st.session_state["cookies_salvo"] = True
-                        except Exception:
-                            pass  # evita erro de chave duplicada
-
-                    st.success(f"✅ Bem-vindo, {df.iloc[0]['Nome']}!")
-                    st.rerun()
-                else:
-                    st.error("❌ Senha incorreta.")
-            else:
+            if df.empty:
                 st.error("❌ Usuário não encontrado.")
+                return
 
-        # ─── CSS para centralizar o botão popover ─────────────────
+            senha_hash = hash_senha(senha)
+            if df.iloc[0]["Senha"] != senha_hash:
+                st.error("❌ Senha incorreta.")
+                return
+
+            # ✅ Login OK
+            st.session_state["usuario_logado"] = {
+                "ID": str(df.iloc[0]["ID"]),
+                "Nome": df.iloc[0]["Nome"],
+                "Email": df.iloc[0]["Email"],
+            }
+
+            st.success(f"✅ Bem-vindo, {df.iloc[0]['Nome']}!")
+            st.rerun()
+
+        # Link recuperar senha
         st.markdown("""
-            <style>
-            div[data-testid="stPopoverContainer"] > button {
-                display: block;
-                margin-left: auto;
-                margin-right: auto;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
-        # ─── Link de redefinição com hover estilizado ─────────────
-        st.markdown("""
-            <style>
-            a.link-esqueci:link,
-            a.link-esqueci:visited {
-                text-decoration: none;
-                color: #777 !important;
-                font-size: 12px;
-                font-weight: normal;
-            }
-
-            a.link-esqueci:hover {
-                color: #1976D2 !important;
-                font-weight: bold;
-            }
-            </style>
-            <div style='text-align:center; margin-top:10px'>
-                <a href='?recuperar=1' class='link-esqueci'>
+            <div style="text-align:center; margin-top:10px">
+                <a href="?recuperar=1" style="font-size:12px; color:#777;">
                     Esqueci minha senha
                 </a>
             </div>
         """, unsafe_allow_html=True)
 
 
-
-        # ──────────────────────────────────────────────────────────────────────────────
-# 🔓 Logout
+# ──────────────────────────────────────────────────────────────────────────────
+# 🔓 LOGOUT
 def logoutX():
-    cookies = get_cookies()
-    if cookies is None:
-        return
-
-
-
     st.sidebar.markdown("---")
 
     usuario = st.session_state.get("usuario_logado")
@@ -233,61 +144,36 @@ def logoutX():
         )
 
     if st.sidebar.button("Sair", key="btn_logout_global"):
-
-        # ✅ APAGA OS COOKIES CERTOS
-        for key in [
-             "usuario_logado",
-            "usuario_nome",
-            "usuario_email"
-        ]:
-            try:
-                cookies.delete(key)
-            except Exception:
-                pass
-
-        try:
-            cookies.save()
-        except Exception:
-            pass
-
-        # ✅ LIMPA TODA A SESSÃO
         for k in list(st.session_state.keys()):
             del st.session_state[k]
 
-        # ✅ LIMPA URL
         try:
             st.query_params.clear()
         except Exception:
             pass
 
-        # ✅ REINICIA SEM LOGIN
-        st.session_state["_logout"] = True
         st.rerun()
-
-
-
-
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 🛑 Verificar se usuário está logado
 def usuario_logado():
-    return st.session_state.get("usuario_logado")
+    return st.session_state.get("usuario_logado") is not None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# ✅ Verificar permissões de menus
+# ✅ Verificar permissões
 def menus_liberados():
     if not usuario_logado():
         return []
 
     usuario_id = str(st.session_state["usuario_logado"]["ID"])
 
-    # 🔥 Admin (ID=1 ou ADMIN) vê tudo
-    if usuario_id in ["1", "ADMIN","20251207_121831_1"]:
+    # 🔥 Admin vê tudo
+    if usuario_id in ["1", "ADMIN", "20251207_121831_1"]:
         return None
 
-    df = conversa_banco.select("permissoes", {
+    df = conversa_banco.select(TABELA_PERMISSOES, {
         "ID": "id",
         "ID_Usuario": "texto",
         "ID_Funcionalidade": "texto",
@@ -297,5 +183,11 @@ def menus_liberados():
         return []
 
     df = df[df["ID_Usuario"] == usuario_id]
-
     return df.to_dict(orient="records")
+# ──────────────────────────────────────────────────────────────────────────────
+# 🔐 Garantir que o usuário esteja logado
+def require_login(mensagem: str = "🔒 Sua sessão expirou. Faça login novamente."):
+    if not usuario_logado():
+        st.warning(mensagem)
+        login()
+        st.stop()

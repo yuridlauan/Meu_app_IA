@@ -3,11 +3,20 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
+
 from paginas import atualizar_ids
-from funcoes_compartilhadas.controle_acesso import get_cookies
+from funcoes_compartilhadas import conversa_banco
+from funcoes_compartilhadas.estilos import aplicar_estilo_padrao, clear_caches
+from funcoes_compartilhadas.controle_acesso import (
+    login,
+    usuario_logado,
+    menus_liberados,
+    logoutX,
+    require_login, 
+)
 
-
-
+# ──────────────────────────────────────────────────────────────────────────────
+# Cache de dados
 @st.cache_data
 def carregar_menus():
     return conversa_banco.select("menus", {
@@ -27,24 +36,14 @@ def carregar_funcionalidades():
     })
 
 
-
-from funcoes_compartilhadas.estilos import (
-    aplicar_estilo_padrao,
-    clear_caches,
-)
-
-from funcoes_compartilhadas.controle_acesso import (
-    login, usuario_logado, menus_liberados, logoutX
-)
-from funcoes_compartilhadas import conversa_banco
-
-
-# VAI SERVIR PARA PODER RECARREGAR A PAGINA AUXILIAR DE RECUPERAÇÃO DE SENHA
-from urllib.parse import parse_qs
+# ──────────────────────────────────────────────────────────────────────────────
+# Recuperação de senha (via query param)
 def reload_module(path: str):
     if path in sys.modules:
         return importlib.reload(sys.modules[path])
     return importlib.import_module(path)
+
+
 query_params = st.query_params.to_dict()
 if query_params.get("recuperar") == "1":
     mod = reload_module("paginas.redefinir_senha")
@@ -52,26 +51,37 @@ if query_params.get("recuperar") == "1":
     st.stop()
 
 
-# Config inicial
-st.set_page_config(page_title="Meu App com I.A.", page_icon="⚡", layout="wide")
+# ──────────────────────────────────────────────────────────────────────────────
+# Configuração inicial
+st.set_page_config(
+    page_title="Meu App com I.A.",
+    page_icon="⚡",
+    layout="wide"
+)
+
 aplicar_estilo_padrao()
 
-# CSS ajuste alinhamento do menu
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ajustes visuais do menu
 st.markdown("""
-    <style>
-    [data-testid="stSidebar"] .stRadio > div {
-        flex-direction: column;
-        gap: 0.3rem;
-    }
-    [data-testid="stSidebar"] label {
-        align-items: center;
-        display: flex;
-        gap: 0.5rem;
-        word-break: break-word;
-    }
-    </style>
+<style>
+[data-testid="stSidebar"] .stRadio > div {
+    flex-direction: column;
+    gap: 0.3rem;
+}
+[data-testid="stSidebar"] label {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    word-break: break-word;
+}
+</style>
 """, unsafe_allow_html=True)
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Ajustes HTML (idioma)
 components.html(
     """
     <script>
@@ -79,7 +89,7 @@ components.html(
       root.setAttribute('lang', 'pt-BR');
       root.setAttribute('translate', 'no');
       const meta = parent.document.createElement('meta');
-      meta.name    = 'google';
+      meta.name = 'google';
       meta.content = 'notranslate';
       parent.document.head.appendChild(meta);
     </script>
@@ -87,67 +97,37 @@ components.html(
     height=0,
 )
 
-def set_tab_title(title: str, icon_url: str | None = None) -> None:
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Título dinâmico da aba
+def set_tab_title(title: str, icon_url: str | None = None):
     js = f"""<script>document.title = "{title}";"""
     if icon_url:
         js += f"""
-        const link = document.querySelector('link[rel*="icon"]') || document.createElement('link');
+        const link = document.querySelector('link[rel*="icon"]')
+            || document.createElement('link');
         link.type = 'image/png';
-        link.rel  = 'shortcut icon';
+        link.rel = 'shortcut icon';
         link.href = '{icon_url}';
-        document.head.appendChild(link);"""
+        document.head.appendChild(link);
+        """
     js += "</script>"
     st.markdown(js, unsafe_allow_html=True)
 
-def reload_module(path: str):
-    if path in sys.modules:
-        return importlib.reload(sys.modules[path])
-    return importlib.import_module(path)
 
-def mudar_pagina(alvo: str) -> None:
-    st.session_state["page"] = alvo
-    st.rerun()
+# ──────────────────────────────────────────────────────────────────────────────
+# 🔐 LOGIN
+require_login()
 
 
-# ────────────── LOGIN ──────────────
-# RESTAURA LOGIN A PARTIR DO COOKIE
-# 🔐 DESATIVA COMPLETAMENTE LOGIN AUTOMÁTICO VIA COOKIES
-
-
-# Se não houver usuário logado, garante que nenhum cookie irá logar automaticamente
-from funcoes_compartilhadas.controle_acesso import get_cookies
-
-if "usuario_logado" not in st.session_state:
-    cookies = get_cookies()
-    if cookies:
-        for key in ["usuario_logado", "usuario_nome", "usuario_email"]:
-            try:
-                cookies.delete(key)
-            except:
-                pass
-        try:
-            cookies.save()
-        except:
-            pass
-
-
-
-if not usuario_logado():
-    login()
-    st.stop()
-
-# ───── SIDEBAR (TUDO antes do corpo do app) ─────
-
-# Lê menus e funcionalidades do banco
+# ──────────────────────────────────────────────────────────────────────────────
+# SIDEBAR – MENUS E PERMISSÕES
 menus = carregar_menus()
 funcionalidades = carregar_funcionalidades()
 
-
-# Organiza menus por ordem
 menus = menus.sort_values(by="Ordem")
 
-# Aplica permissões
-permissoes = menus_liberados()  # None → acesso total (admin)
+permissoes = menus_liberados()  # None → admin (acesso total)
 
 if permissoes is not None:
     funcionalidades = funcionalidades[
@@ -156,11 +136,11 @@ if permissoes is not None:
         )
     ]
 
-# Monta estrutura dos menus
 menu_disponivel = {}
 for _, menu in menus.iterrows():
-    # Compara como string, sempre!
-    itens = funcionalidades[funcionalidades["ID_Menu"].astype(str) == str(menu["ID"])]
+    itens = funcionalidades[
+        funcionalidades["ID_Menu"].astype(str) == str(menu["ID"])
+    ]
     if not itens.empty:
         menu_disponivel[menu["Nome"]] = {
             row["Caminho"]: row["Nome"]
@@ -171,7 +151,9 @@ if not menu_disponivel:
     st.warning("⚠️ Você não tem acesso a nenhum menu.")
     st.stop()
 
-# MENU LATERAL (Sidebar)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MENU LATERAL
 st.sidebar.image("imagens/logo.png", use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
@@ -184,19 +166,20 @@ rotulo = st.sidebar.radio(
     index=0
 )
 
-# 🔥 LOGOUT NO FINAL DO SIDEBAR 🔥
-logoutX()   # <--- SEMPRE AQUI, depois de tudo do menu lateral
+# 🔥 LOGOUT SEMPRE NO FINAL DO SIDEBAR
+logoutX()
 
 if rotulo == "Selecionar...":
     st.stop()
 
-# Corpo do app (só a partir daqui!)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CORPO DO APP
 arquivo = next(k for k, v in funcionalidades_disp.items() if v == rotulo)
 set_tab_title(f"{rotulo} — Meu App")
 
 try:
     mod = __import__(f"paginas.{arquivo}", fromlist=["app"])
     mod.app()
-
 except Exception as e:
     st.error(f"Erro ao carregar a página '{arquivo}': {e}")
