@@ -21,7 +21,7 @@ TIPOS_COLUNAS = {
     "Notificação": "texto",
     "Validade do Boleto": "data",
     "Validade do Cercon": "data",
-    "Prazo de Vistoria": "numero",
+    "Tipo de Empresa": "texto",
     "Contato": "texto",
     "Militar Responsável": "texto",
     "Andamento": "texto",
@@ -90,7 +90,7 @@ def formulario_protocolo(dados=None, prefix=""):
             "Notificação": "Notificar",
             "Validade do Boleto": (hoje + timedelta(days=30)).strftime("%d/%m/%Y"),
             "Validade do Cercon": (hoje + timedelta(days=365)).strftime("%d/%m/%Y"),
-            "Prazo de Vistoria": 30,
+            "Tipo de Empresa": "Regular",
             "Contato": "",
             "Militar Responsável": "Asp Of D'Lauan",
             "Andamento": "Boleto Impresso"
@@ -117,7 +117,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Licenciamento Facilitado",
             "Análise de Projeto",
             "Substituição de Projeto", 
-            "Ponto de Referência"
+            "Ponto de Referência",
+            "Credenciamento Extintor/Brigada"
         ]
 
         # descobre o índice correto com base no que veio do banco
@@ -196,21 +197,21 @@ def formulario_protocolo(dados=None, prefix=""):
             key=f"valcercon_{prefix}"
         )
 
-        # Prazo de vistoria = 30 - dias decorridos (nunca < 0)
-        if data_dt:
-            dias_passados = (date.today() - data_dt.date()).days
-            dias_passados = max(dias_passados, 0)
-            prazo_restante = max(30 - dias_passados, 0)
-        else:
-            prazo_restante = dados.get("Prazo de Vistoria", 30)
+        opcoes_empresa = ["Regular", "Isento", "MEI", "Evento Temporário"]
 
-        prazo_vistoria = st.number_input(
-            "Prazo de Vistoria (dias)",
-            min_value=0,
-            max_value=30,
-            value=int(prazo_restante),
-            key=f"prazo_{prefix}"
+        tipo_empresa_valor = dados.get("Tipo de Empresa", opcoes_empresa[0])
+        if tipo_empresa_valor in opcoes_empresa:
+            tipo_empresa_index = opcoes_empresa.index(tipo_empresa_valor)
+        else:
+            tipo_empresa_index = 0
+
+        tipo_empresa = st.selectbox(
+            "Tipo de Empresa",
+            opcoes_empresa,
+            index=tipo_empresa_index,
+            key=f"empresa_{prefix}"
         )
+
 
         contato = st.text_input("Contato", value=dados["Contato"], key=f"cont_{prefix}")
 
@@ -236,16 +237,13 @@ def formulario_protocolo(dados=None, prefix=""):
 
 
         opcoes_andamento = [
-            "Boleto Impresso",
-            "Boleto Entregue",
-            "Boleto Pago",
-            "Isento",
-            "MEI",
-            "Processo Expirado",
-            "Empresa Encerrou",
+            "Protocolado",
+            "Vistoria Feita",
             "Cercon Impresso",
-            "Empresa Não Encontrada"
+            "Empresa Encerrou",
+            "Empresa/Proprietário Não Localizado"
         ]
+
 
         andamento_valor = dados.get("Andamento", opcoes_andamento[0])
         if andamento_valor in opcoes_andamento:
@@ -297,7 +295,7 @@ def formulario_protocolo(dados=None, prefix=""):
     "Notificação": notificacao,
     "Validade do Boleto": validade_boleto,
     "Validade do Cercon": validade_cercon,
-    "Prazo de Vistoria": prazo_vistoria,
+    "Tipo de Empresa": tipo_empresa,
     "Contato": contato,
     "Militar Responsável": militar,
     "Andamento": andamento,
@@ -347,7 +345,7 @@ def app(TABELA):
                 "Notificação": dados_novos["Notificação"],
                 "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
                 "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
-                "Prazo de Vistoria": dados_novos["Prazo de Vistoria"],
+                "Tipo de Empresa": dados_novos["Tipo de Empresa"],
                 "Contato": dados_novos["Contato"],
                 "Militar Responsável": dados_novos["Militar Responsável"],
                 "Andamento": dados_novos["Andamento"],
