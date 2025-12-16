@@ -4,6 +4,7 @@ import importlib
 import sys
 import streamlit.components.v1 as components
 
+
 from paginas import atualizar_ids
 from funcoes_compartilhadas import conversa_banco
 from funcoes_compartilhadas.estilos import aplicar_estilo_padrao, clear_caches

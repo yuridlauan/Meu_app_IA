@@ -420,9 +420,15 @@ def app(TABELA):
     ].shape[0]
 
     qtd_expirados = df_alert[
-    (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
-    (df_alert["Validade_dt"] >= pd.Timestamp(hoje))
+    (
+        (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
+        (df_alert["Andamento"] != "Cercon Impresso")
+    ) | (
+        (df_alert["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
+        (df_alert["Andamento"] != "Cercon Impresso")
+    )
     ].shape[0]
+
 
 
     # --- Construção dos badges ---
@@ -564,9 +570,7 @@ def app(TABELA):
                             st.session_state[confirma_key] = False
 
 
-    # ---------------------------
-    # 3️⃣ ABA: CERCONS VENCIDOS (< 365 DIAS)
-    # ---------------------------
+    
     # ---------------------------
 # 3️⃣ ABA: CERCONS VENCIDOS (< 365 DIAS)
 # ---------------------------
@@ -627,28 +631,24 @@ def app(TABELA):
                             st.session_state[confirma_key] = False
 
 
+   
     # ---------------------------
-    # 4️⃣ ABA: PROCESSOS EXPIRADOS
-    # ---------------------------
-    # ---------------------------
-# 4️⃣ ABA: PROCESSOS EXPIRADOS (critério único: boleto vencido)
-# ---------------------------
-    # ---------------------------
-# 4️⃣ ABA: PROCESSOS EXPIRADOS (Boleto vencido OU Inatividade)
+# 4️⃣ ABA: PROCESSOS EXPIRADOS
 # ---------------------------
     with aba_exp:
-        st.markdown("### ⚠️ Processos Expirados (Boleto Venceu ou Inatividade (> 120 dias))")
+        st.markdown("### ⚠️ Processos Expirados")
 
-        # --- Critérios de Expiração ---
+        # 🔹 Critério 1: Boleto vencido e andamento ≠ Cercon Impresso
         boleto_vencido = (
             (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
-            (df_temp["Validade_dt"] >= pd.Timestamp(hoje)) &
-            (df_temp["Andamento"].str.lower() != "boleto pago")
+            (df_temp["Andamento"] != "Cercon Impresso")
         )
 
+        # 🔹 Critério 2: Inatividade
+        # (120 dias após vencimento do boleto e andamento ≠ Cercon Impresso)
         inatividade = (
-            (df_temp["Andamento"].str.lower() == "boleto pago") &
-            (df_temp["DataProt_dt"] < pd.Timestamp(hoje - timedelta(days=150)))
+            (df_temp["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
+            (df_temp["Andamento"] != "Cercon Impresso")
         )
 
         df_expirados = df_temp[
@@ -656,20 +656,23 @@ def app(TABELA):
         ].sort_values("DataProt_dt", ascending=False)
 
         if df_expirados.empty:
-            st.info("Nenhum processo expirado por boleto vencido ou inatividade.")
+            st.info("Nenhum processo expirado.")
         else:
             for _, row in df_expirados.iterrows():
-                andamento = str(row["Andamento"]).strip().lower()
-                dias_desde_protocolo = (hoje - row["DataProt_dt"].date()).days
 
-                if andamento == "boleto pago" and dias_desde_protocolo > 150:
-                    motivo = "Inatividade (> 120 dias)"
-                elif (row["Boleto_dt"] < pd.Timestamp(hoje)) and (andamento != "boleto pago"):
-                    motivo = "Boleto Vencido"
+                # 🔹 Definição do motivo
+                if (
+                    row["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)
+                    and row["Andamento"] != "Cercon Impresso"
+                ):
+                    motivo = "Inatividade (> 120 dias após vencimento do boleto)"
                 else:
-                    motivo = "Outro"
+                    motivo = "Boleto Vencido"
 
-                with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})", expanded=False):
+                with st.expander(
+                    f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})",
+                    expanded=False
+                ):
                     dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
 
                     confirma_key = f"confirma_exclusao_exp_{row['ID']}"
@@ -695,20 +698,31 @@ def app(TABELA):
                         if excluir:
                             st.session_state[confirma_key] = True
 
-                    # Confirmação de exclusão
+                    # 🔹 Confirmação de exclusão
                     if st.session_state.get(confirma_key, False):
                         st.warning("Deseja excluir este protocolo?")
                         col_c1, col_c2 = st.columns(2)
 
-                        confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"del_exp_{row['ID']}")
-                        cancela = col_c2.button("Cancelar", key=f"cancela_exp_{row['ID']}")
+                        confirma = col_c1.button(
+                            "🚨 Confirmar Exclusão",
+                            key=f"del_exp_{row['ID']}"
+                        )
+                        cancela = col_c2.button(
+                            "Cancelar",
+                            key=f"cancela_exp_{row['ID']}"
+                        )
 
                         if confirma:
-                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
+                            delete(
+                                TABELA,
+                                where=f"ID,eq,{row['ID']}",
+                                tipos_colunas=TIPOS_COLUNAS
+                            )
                             st.success("Excluído!")
                             st.rerun()
                         elif cancela:
                             st.session_state[confirma_key] = False
+
 
 
     # ---------------------------

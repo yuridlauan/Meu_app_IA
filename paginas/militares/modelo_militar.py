@@ -94,17 +94,12 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
     semana = hoje - timedelta(days=7)
     df_novos = df[df["DataProt_dt"] >= pd.Timestamp(semana)]
 
-    ATRIBUIDOS = ["Boleto Impresso", "Isento", "MEI"]
-    EM_ANDAMENTO = ["Boleto Pago", "Boleto Entregue"]
-    CONCLUIDOS = ["Cercon Impresso", "Empresa Encerrou"]
-    PENDENTES = ["Processo Expirado", "Empresa Não Encontrada"]
-    TODOS = ATRIBUIDOS + EM_ANDAMENTO + CONCLUIDOS + PENDENTES
+        # Novos critérios com base em "Andamento"
+    df_atr = df[df["Militar Responsável"] == nome_militar]
+    df_and = df_atr[df_atr["Andamento"].isin(["Protocolado", "Vistoria Feita"])]
+    df_conc = df_atr[df_atr["Andamento"] == "Cercon Impresso"]
+    df_pend = df_atr[df_atr["Andamento"] == "Empresa/Proprietário Não Localizado"]
 
-    df_atr = df[df["Andamento"].isin(ATRIBUIDOS)]
-    df_and = df[df["Andamento"].isin(EM_ANDAMENTO)]
-    df_conc = df[df["Andamento"].isin(CONCLUIDOS)]
-    df_pend = df[df["Andamento"].isin(PENDENTES)]
-    df_perdidos = df[~df["Andamento"].isin(TODOS)]
 
     # 📅 AQUI VAI A NOVA ABA DE EVENTOS
     aba_eventos, aba_est, aba_novos, aba_atr, aba_and, aba_conc, aba_pend = st.tabs([
@@ -222,10 +217,11 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
         df_grafico["Mês"] = df_grafico["DataProt_dt"].dt.strftime("%m - %B")
 
         andamento_map = {
-            "Em andamento": EM_ANDAMENTO,
-            "Concluídos": CONCLUIDOS,
-            "Pendentes": PENDENTES,
-        }
+        "Em andamento": ["Protocolado", "Vistoria Feita"],
+        "Concluídos": ["Cercon Impresso"],
+        "Pendentes": ["Empresa/Proprietário Não Localizado"],
+    }
+
 
         resumo = pd.DataFrame()
 
