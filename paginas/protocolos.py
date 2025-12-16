@@ -387,12 +387,6 @@ def app(TABELA):
         errors="coerce"
     )
 
-    # Prazo como número
-    df_temp["Prazo_num"] = pd.to_numeric(
-        df_temp["Prazo de Vistoria"],
-        errors="coerce"
-    ).fillna(0).astype(int)
-
     hoje = date.today()
     limite_proximo = hoje + timedelta(days=30)
     limite_vencidos = hoje - timedelta(days=365)
