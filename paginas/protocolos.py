@@ -405,10 +405,7 @@ def app(TABELA):
     df_alert["Validade_dt"] = pd.to_datetime(df_alert["Validade do Cercon"], format="%d/%m/%Y", errors="coerce")
     df_alert["Boleto_dt"] = pd.to_datetime(df_alert["Validade do Boleto"], format="%d/%m/%Y", errors="coerce")
     df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"],format="%d/%m/%Y",dayfirst=True,errors="coerce") 
-    hoje = date.today()
-    limite_proximo = hoje + timedelta(days=30)
-    limite_vencidos = hoje - timedelta(days=365)
-
+    
     # --- Cálculos ---
     qtd_novos = df_alert[df_alert["DataProt_dt"].dt.date == hoje].shape[0]
 
