@@ -18,7 +18,7 @@ TIPOS_COLUNAS = {
     "CPF/CNPJ": "texto",
     "Nome Fantasia": "texto",
     "Área (m²)": "numero",
-    "Valor Total": "numero100",
+    "Notificação": "texto",
     "Validade do Boleto": "data",
     "Validade do Cercon": "data",
     "Prazo de Vistoria": "numero",
@@ -87,7 +87,7 @@ def formulario_protocolo(dados=None, prefix=""):
             "CPF/CNPJ": "",
             "Nome Fantasia": "",
             "Área (m²)": 0.0,
-            "Valor Total": 0.0,
+            "Notificação": "Notificar",
             "Validade do Boleto": (hoje + timedelta(days=30)).strftime("%d/%m/%Y"),
             "Validade do Cercon": (hoje + timedelta(days=365)).strftime("%d/%m/%Y"),
             "Prazo de Vistoria": 30,
@@ -146,26 +146,23 @@ def formulario_protocolo(dados=None, prefix=""):
             key=f"area_{prefix}"
         )
 
-        # Calcula o valor sugerido com base na área
-        VALOR_BASE = 150.35
-        LIMITE_AREA = 100
-        VALOR_EXCEDENTE = 0.22
+        notificacoes_opcoes = ["Notificado", "Notificar"]
 
-        if area <= LIMITE_AREA:
-            valor_calculado = VALOR_BASE
+        notificacao_valor = dados.get("Notificação", notificacoes_opcoes[1])
+        if notificacao_valor in notificacoes_opcoes:
+            notificacao_index = notificacoes_opcoes.index(notificacao_valor)
         else:
-            excedente = area - LIMITE_AREA
-            valor_calculado = round(VALOR_BASE + excedente * VALOR_EXCEDENTE, 2)
+            notificacao_index = 1
 
-        valor = st.number_input(
-            "Valor Total (R$)",
-            min_value=0.0,
-            format="%.2f",
-            value=valor_calculado if prefix == "novo" else sanitize_number(dados.get("Valor Total", 0.0)),
-            key=f"valor_{prefix}"
+        notificacao = st.selectbox(
+            "Notificação",
+            notificacoes_opcoes,
+            index=notificacao_index,
+            key=f"notif_{prefix}"
         )
 
-        st.caption(f"💡 Valor calculado automaticamente: R$ {valor_calculado:.2f}")
+
+   
 
     # -------- COLUNA 2 --------
     with col2:
@@ -297,7 +294,7 @@ def formulario_protocolo(dados=None, prefix=""):
     "CPF/CNPJ": cpf,
     "Nome Fantasia": nome,
     "Área (m²)": area,
-    "Valor Total": valor,
+    "Notificação": notificacao,
     "Validade do Boleto": validade_boleto,
     "Validade do Cercon": validade_cercon,
     "Prazo de Vistoria": prazo_vistoria,
@@ -347,7 +344,7 @@ def app(TABELA):
                 "CPF/CNPJ": dados_novos["CPF/CNPJ"],
                 "Nome Fantasia": dados_novos["Nome Fantasia"],
                 "Área (m²)": dados_novos["Área (m²)"],
-                "Valor Total": dados_novos["Valor Total"],
+                "Notificação": dados_novos["Notificação"],
                 "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
                 "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
                 "Prazo de Vistoria": dados_novos["Prazo de Vistoria"],

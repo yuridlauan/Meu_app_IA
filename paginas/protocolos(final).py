@@ -116,7 +116,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Vistoria para Funcionamento",
             "Licenciamento Facilitado",
             "Análise de Projeto",
-            "Substituição de Projeto"
+            "Substituição de Projeto", 
+            "Ponto de Referência"
         ]
 
         # descobre o índice correto com base no que veio do banco
@@ -645,23 +646,43 @@ def app(TABELA):
     # ---------------------------
 # 4️⃣ ABA: PROCESSOS EXPIRADOS (critério único: boleto vencido)
 # ---------------------------
+    # ---------------------------
+# 4️⃣ ABA: PROCESSOS EXPIRADOS (Boleto vencido OU Inatividade)
+# ---------------------------
     with aba_exp:
-        st.markdown("### ⚠️ Processos Expirados (Boleto Vencido)")
+        st.markdown("### ⚠️ Processos Expirados (Boleto Venceu ou Inatividade (> 120 dias))")
 
-        # Apenas BOLETO vencido
+        # --- Critérios de Expiração ---
+        boleto_vencido = (
+            (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
+            (df_temp["Validade_dt"] >= pd.Timestamp(hoje)) &
+            (df_temp["Andamento"].str.lower() != "boleto pago")
+        )
+
+        inatividade = (
+            (df_temp["Andamento"].str.lower() == "boleto pago") &
+            (df_temp["DataProt_dt"] < pd.Timestamp(hoje - timedelta(days=150)))
+        )
+
         df_expirados = df_temp[
-                (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &  # boleto vencido
-                (df_temp["Validade_dt"] >= pd.Timestamp(hoje))  # cercon ainda válido
-            ].sort_values("Boleto_dt")
-
+            boleto_vencido | inatividade
+        ].sort_values("DataProt_dt", ascending=False)
 
         if df_expirados.empty:
-            st.info("Nenhum processo expirado (boleto vencido)!")
+            st.info("Nenhum processo expirado por boleto vencido ou inatividade.")
         else:
             for _, row in df_expirados.iterrows():
+                andamento = str(row["Andamento"]).strip().lower()
+                dias_desde_protocolo = (hoje - row["DataProt_dt"].date()).days
 
-                with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']}", expanded=False):
+                if andamento == "boleto pago" and dias_desde_protocolo > 150:
+                    motivo = "Inatividade (> 120 dias)"
+                elif (row["Boleto_dt"] < pd.Timestamp(hoje)) and (andamento != "boleto pago"):
+                    motivo = "Boleto Vencido"
+                else:
+                    motivo = "Outro"
 
+                with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})", expanded=False):
                     dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
 
                     confirma_key = f"confirma_exclusao_exp_{row['ID']}"
@@ -689,7 +710,7 @@ def app(TABELA):
 
                     # Confirmação de exclusão
                     if st.session_state.get(confirma_key, False):
-                        st.warning("Confirma exclusão?")
+                        st.warning("Deseja excluir este protocolo?")
                         col_c1, col_c2 = st.columns(2)
 
                         confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"del_exp_{row['ID']}")
@@ -701,6 +722,7 @@ def app(TABELA):
                             st.rerun()
                         elif cancela:
                             st.session_state[confirma_key] = False
+
 
     # ---------------------------
 # 5️⃣ ABA: NOVOS PROTOCOLOS CADASTRADOS HOJE
