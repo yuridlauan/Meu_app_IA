@@ -93,7 +93,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Tipo de Empresa": "Regular",
             "Contato": "",
             "Militar Responsável": "Asp Of D'Lauan",
-            "Andamento": "Boleto Impresso"
+            "Andamento": "Protocolado",
+
         }
 
     col1, col2 = st.columns(2)
