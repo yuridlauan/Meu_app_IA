@@ -21,7 +21,7 @@ TIPOS_COLUNAS = {
     "Notificação": "texto",
     "Validade do Boleto": "data",
     "Validade do Cercon": "data",
-    "Prazo de Vistoria": "numero",
+    "Tipo de Empresa": "texto",
     "Contato": "texto",
     "Militar Responsável": "texto",
     "Andamento": "texto",
@@ -90,10 +90,11 @@ def formulario_protocolo(dados=None, prefix=""):
             "Notificação": "Notificar",
             "Validade do Boleto": (hoje + timedelta(days=30)).strftime("%d/%m/%Y"),
             "Validade do Cercon": (hoje + timedelta(days=365)).strftime("%d/%m/%Y"),
-            "Prazo de Vistoria": 30,
+            "Tipo de Empresa": "Regular",
             "Contato": "",
             "Militar Responsável": "Asp Of D'Lauan",
-            "Andamento": "Boleto Impresso"
+            "Andamento": "Protocolado",
+
         }
 
     col1, col2 = st.columns(2)
@@ -117,7 +118,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Licenciamento Facilitado",
             "Análise de Projeto",
             "Substituição de Projeto", 
-            "Ponto de Referência"
+            "Ponto de Referência",
+            "Credenciamento Extintor/Brigada"
         ]
 
         # descobre o índice correto com base no que veio do banco
@@ -196,21 +198,21 @@ def formulario_protocolo(dados=None, prefix=""):
             key=f"valcercon_{prefix}"
         )
 
-        # Prazo de vistoria = 30 - dias decorridos (nunca < 0)
-        if data_dt:
-            dias_passados = (date.today() - data_dt.date()).days
-            dias_passados = max(dias_passados, 0)
-            prazo_restante = max(30 - dias_passados, 0)
-        else:
-            prazo_restante = dados.get("Prazo de Vistoria", 30)
+        opcoes_empresa = ["Regular", "Isento", "MEI", "Evento Temporário"]
 
-        prazo_vistoria = st.number_input(
-            "Prazo de Vistoria (dias)",
-            min_value=0,
-            max_value=30,
-            value=int(prazo_restante),
-            key=f"prazo_{prefix}"
+        tipo_empresa_valor = dados.get("Tipo de Empresa", opcoes_empresa[0])
+        if tipo_empresa_valor in opcoes_empresa:
+            tipo_empresa_index = opcoes_empresa.index(tipo_empresa_valor)
+        else:
+            tipo_empresa_index = 0
+
+        tipo_empresa = st.selectbox(
+            "Tipo de Empresa",
+            opcoes_empresa,
+            index=tipo_empresa_index,
+            key=f"empresa_{prefix}"
         )
+
 
         contato = st.text_input("Contato", value=dados["Contato"], key=f"cont_{prefix}")
 
@@ -236,16 +238,13 @@ def formulario_protocolo(dados=None, prefix=""):
 
 
         opcoes_andamento = [
-            "Boleto Impresso",
-            "Boleto Entregue",
-            "Boleto Pago",
-            "Isento",
-            "MEI",
-            "Processo Expirado",
-            "Empresa Encerrou",
+            "Protocolado",
+            "Vistoria Feita",
             "Cercon Impresso",
-            "Empresa Não Encontrada"
+            "Empresa Encerrou",
+            "Empresa/Proprietário Não Localizado"
         ]
+
 
         andamento_valor = dados.get("Andamento", opcoes_andamento[0])
         if andamento_valor in opcoes_andamento:
@@ -297,7 +296,7 @@ def formulario_protocolo(dados=None, prefix=""):
     "Notificação": notificacao,
     "Validade do Boleto": validade_boleto,
     "Validade do Cercon": validade_cercon,
-    "Prazo de Vistoria": prazo_vistoria,
+    "Tipo de Empresa": tipo_empresa,
     "Contato": contato,
     "Militar Responsável": militar,
     "Andamento": andamento,
@@ -347,7 +346,7 @@ def app(TABELA):
                 "Notificação": dados_novos["Notificação"],
                 "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
                 "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
-                "Prazo de Vistoria": dados_novos["Prazo de Vistoria"],
+                "Tipo de Empresa": dados_novos["Tipo de Empresa"],
                 "Contato": dados_novos["Contato"],
                 "Militar Responsável": dados_novos["Militar Responsável"],
                 "Andamento": dados_novos["Andamento"],
@@ -389,12 +388,6 @@ def app(TABELA):
         errors="coerce"
     )
 
-    # Prazo como número
-    df_temp["Prazo_num"] = pd.to_numeric(
-        df_temp["Prazo de Vistoria"],
-        errors="coerce"
-    ).fillna(0).astype(int)
-
     hoje = date.today()
     limite_proximo = hoje + timedelta(days=30)
     limite_vencidos = hoje - timedelta(days=365)
@@ -412,10 +405,7 @@ def app(TABELA):
     df_alert["Validade_dt"] = pd.to_datetime(df_alert["Validade do Cercon"], format="%d/%m/%Y", errors="coerce")
     df_alert["Boleto_dt"] = pd.to_datetime(df_alert["Validade do Boleto"], format="%d/%m/%Y", errors="coerce")
     df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"],format="%d/%m/%Y",dayfirst=True,errors="coerce") 
-    hoje = date.today()
-    limite_proximo = hoje + timedelta(days=30)
-    limite_vencidos = hoje - timedelta(days=365)
-
+    
     # --- Cálculos ---
     qtd_novos = df_alert[df_alert["DataProt_dt"].dt.date == hoje].shape[0]
 
@@ -430,9 +420,15 @@ def app(TABELA):
     ].shape[0]
 
     qtd_expirados = df_alert[
-    (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
-    (df_alert["Validade_dt"] >= pd.Timestamp(hoje))
+    (
+        (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
+        (df_alert["Andamento"] != "Cercon Impresso")
+    ) | (
+        (df_alert["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
+        (df_alert["Andamento"] != "Cercon Impresso")
+    )
     ].shape[0]
+
 
 
     # --- Construção dos badges ---
@@ -574,9 +570,7 @@ def app(TABELA):
                             st.session_state[confirma_key] = False
 
 
-    # ---------------------------
-    # 3️⃣ ABA: CERCONS VENCIDOS (< 365 DIAS)
-    # ---------------------------
+    
     # ---------------------------
 # 3️⃣ ABA: CERCONS VENCIDOS (< 365 DIAS)
 # ---------------------------
@@ -637,28 +631,24 @@ def app(TABELA):
                             st.session_state[confirma_key] = False
 
 
+   
     # ---------------------------
-    # 4️⃣ ABA: PROCESSOS EXPIRADOS
-    # ---------------------------
-    # ---------------------------
-# 4️⃣ ABA: PROCESSOS EXPIRADOS (critério único: boleto vencido)
-# ---------------------------
-    # ---------------------------
-# 4️⃣ ABA: PROCESSOS EXPIRADOS (Boleto vencido OU Inatividade)
+# 4️⃣ ABA: PROCESSOS EXPIRADOS
 # ---------------------------
     with aba_exp:
-        st.markdown("### ⚠️ Processos Expirados (Boleto Venceu ou Inatividade (> 120 dias))")
+        st.markdown("### ⚠️ Processos Expirados")
 
-        # --- Critérios de Expiração ---
+        # 🔹 Critério 1: Boleto vencido e andamento ≠ Cercon Impresso
         boleto_vencido = (
             (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
-            (df_temp["Validade_dt"] >= pd.Timestamp(hoje)) &
-            (df_temp["Andamento"].str.lower() != "boleto pago")
+            (df_temp["Andamento"] != "Cercon Impresso")
         )
 
+        # 🔹 Critério 2: Inatividade
+        # (120 dias após vencimento do boleto e andamento ≠ Cercon Impresso)
         inatividade = (
-            (df_temp["Andamento"].str.lower() == "boleto pago") &
-            (df_temp["DataProt_dt"] < pd.Timestamp(hoje - timedelta(days=150)))
+            (df_temp["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
+            (df_temp["Andamento"] != "Cercon Impresso")
         )
 
         df_expirados = df_temp[
@@ -666,20 +656,23 @@ def app(TABELA):
         ].sort_values("DataProt_dt", ascending=False)
 
         if df_expirados.empty:
-            st.info("Nenhum processo expirado por boleto vencido ou inatividade.")
+            st.info("Nenhum processo expirado.")
         else:
             for _, row in df_expirados.iterrows():
-                andamento = str(row["Andamento"]).strip().lower()
-                dias_desde_protocolo = (hoje - row["DataProt_dt"].date()).days
 
-                if andamento == "boleto pago" and dias_desde_protocolo > 150:
-                    motivo = "Inatividade (> 120 dias)"
-                elif (row["Boleto_dt"] < pd.Timestamp(hoje)) and (andamento != "boleto pago"):
-                    motivo = "Boleto Vencido"
+                # 🔹 Definição do motivo
+                if (
+                    row["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)
+                    and row["Andamento"] != "Cercon Impresso"
+                ):
+                    motivo = "Inatividade (> 120 dias após vencimento do boleto)"
                 else:
-                    motivo = "Outro"
+                    motivo = "Boleto Vencido"
 
-                with st.expander(f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})", expanded=False):
+                with st.expander(
+                    f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})",
+                    expanded=False
+                ):
                     dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
 
                     confirma_key = f"confirma_exclusao_exp_{row['ID']}"
@@ -705,20 +698,31 @@ def app(TABELA):
                         if excluir:
                             st.session_state[confirma_key] = True
 
-                    # Confirmação de exclusão
+                    # 🔹 Confirmação de exclusão
                     if st.session_state.get(confirma_key, False):
                         st.warning("Deseja excluir este protocolo?")
                         col_c1, col_c2 = st.columns(2)
 
-                        confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"del_exp_{row['ID']}")
-                        cancela = col_c2.button("Cancelar", key=f"cancela_exp_{row['ID']}")
+                        confirma = col_c1.button(
+                            "🚨 Confirmar Exclusão",
+                            key=f"del_exp_{row['ID']}"
+                        )
+                        cancela = col_c2.button(
+                            "Cancelar",
+                            key=f"cancela_exp_{row['ID']}"
+                        )
 
                         if confirma:
-                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
+                            delete(
+                                TABELA,
+                                where=f"ID,eq,{row['ID']}",
+                                tipos_colunas=TIPOS_COLUNAS
+                            )
                             st.success("Excluído!")
                             st.rerun()
                         elif cancela:
                             st.session_state[confirma_key] = False
+
 
 
     # ---------------------------

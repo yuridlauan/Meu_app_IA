@@ -94,148 +94,61 @@ def formulario_protocolo(dados=None, prefix=""):
             "Contato": "",
             "Militar Responsável": "Asp Of D'Lauan",
             "Andamento": "Protocolado",
-
+            "Cidade": "Porangatu"
         }
 
     col1, col2 = st.columns(2)
 
     # -------- COLUNA 1 --------
     with col1:
-        data_raw = st.text_input(
-            "Data de Protocolo (dd/mm/aaaa)",
-            value=dados["Data de Protocolo"],
-            key=f"data_{prefix}"
-        )
-
-        protocolo = st.text_input(
-            "Nº de Protocolo",
-            value=dados["Nº de Protocolo"],
-            key=f"prot_{prefix}"
-        )
+        data_raw = st.text_input("Data de Protocolo (dd/mm/aaaa)", value=dados.get("Data de Protocolo", ""), key=f"data_{prefix}")
+        protocolo = st.text_input("Nº de Protocolo", value=dados.get("Nº de Protocolo", ""), key=f"prot_{prefix}")
 
         opcoes_tipo = [
             "Vistoria para Funcionamento",
             "Licenciamento Facilitado",
             "Análise de Projeto",
-            "Substituição de Projeto", 
+            "Substituição de Projeto",
             "Ponto de Referência",
             "Credenciamento Extintor/Brigada"
         ]
+        tipo_valor = dados.get("Tipo de Serviço") or opcoes_tipo[0]
+        tipo_index = opcoes_tipo.index(tipo_valor) if tipo_valor in opcoes_tipo else 0
+        tipo = st.selectbox("Tipo de Serviço", opcoes_tipo, index=tipo_index, key=f"tipo_{prefix}")
 
-        # descobre o índice correto com base no que veio do banco
-        tipo_valor = dados.get("Tipo de Serviço", opcoes_tipo[0])
-        if tipo_valor in opcoes_tipo:
-            tipo_index = opcoes_tipo.index(tipo_valor)
-        else:
-            tipo_index = 0  # fallback
-
-        tipo = st.selectbox(
-            "Tipo de Serviço",
-            opcoes_tipo,
-            index=tipo_index,
-            key=f"tipo_{prefix}"
-        )
-
-
-        cpf = st.text_input("CPF/CNPJ", value=dados["CPF/CNPJ"], key=f"cpf_{prefix}")
-        nome = st.text_input("Nome Fantasia", value=dados["Nome Fantasia"], key=f"nome_{prefix}")
-
-        area = st.number_input(
-            "Área (m²)",
-            min_value=0.0,
-            format="%.2f",
-            value=float(dados.get("Área (m²)", 0.0)),
-            key=f"area_{prefix}"
-        )
+        cpf = st.text_input("CPF/CNPJ", value=dados.get("CPF/CNPJ", ""), key=f"cpf_{prefix}")
+        nome = st.text_input("Nome Fantasia", value=dados.get("Nome Fantasia", ""), key=f"nome_{prefix}")
+        area = st.number_input("Área (m²)", min_value=0.0, format="%.2f", value=sanitize_number(dados.get("Área (m²)", 0.0)), key=f"area_{prefix}")
 
         notificacoes_opcoes = ["Notificado", "Notificar"]
-
-        notificacao_valor = dados.get("Notificação", notificacoes_opcoes[1])
-        if notificacao_valor in notificacoes_opcoes:
-            notificacao_index = notificacoes_opcoes.index(notificacao_valor)
-        else:
-            notificacao_index = 1
-
-        notificacao = st.selectbox(
-            "Notificação",
-            notificacoes_opcoes,
-            index=notificacao_index,
-            key=f"notif_{prefix}"
-        )
-
-
-   
+        notificacao_valor = dados.get("Notificação") or notificacoes_opcoes[1]
+        notificacao_index = notificacoes_opcoes.index(notificacao_valor) if notificacao_valor in notificacoes_opcoes else 1
+        notificacao = st.selectbox("Notificação", notificacoes_opcoes, index=notificacao_index, key=f"notif_{prefix}")
 
     # -------- COLUNA 2 --------
     with col2:
-        # Base para datas automáticas
         try:
             data_dt = datetime.strptime(data_raw, "%d/%m/%Y")
         except ValueError:
             data_dt = None
 
-        # Validade do Boleto = data protocolo + 30 dias
-        if data_dt:
-            validade_boleto_auto = (data_dt + timedelta(days=30)).strftime("%d/%m/%Y")
-        else:
-            validade_boleto_auto = dados.get("Validade do Boleto", "")
+        validade_boleto_auto = (data_dt + timedelta(days=30)).strftime("%d/%m/%Y") if data_dt else dados.get("Validade do Boleto", "")
+        validade_boleto = st.text_input("Validade do Boleto (dd/mm/aaaa)", value=validade_boleto_auto, key=f"valboleto_{prefix}")
 
-        validade_boleto = st.text_input(
-            "Validade do Boleto (dd/mm/aaaa)",
-            value=validade_boleto_auto,
-            key=f"valboleto_{prefix}"
-        )
-
-        # Validade do Cercon = data protocolo + 365 dias
-        if data_dt:
-            validade_cercon_auto = (data_dt + timedelta(days=365)).strftime("%d/%m/%Y")
-        else:
-            validade_cercon_auto = dados.get("Validade do Cercon", "")
-
-        validade_cercon = st.text_input(
-            "Validade do Cercon (dd/mm/aaaa)",
-            value=validade_cercon_auto,
-            key=f"valcercon_{prefix}"
-        )
+        validade_cercon_auto = (data_dt + timedelta(days=365)).strftime("%d/%m/%Y") if data_dt else dados.get("Validade do Cercon", "")
+        validade_cercon = st.text_input("Validade do Cercon (dd/mm/aaaa)", value=validade_cercon_auto, key=f"valcercon_{prefix}")
 
         opcoes_empresa = ["Regular", "Isento", "MEI", "Evento Temporário"]
+        tipo_empresa_valor = dados.get("Tipo de Empresa") or opcoes_empresa[0]
+        tipo_empresa_index = opcoes_empresa.index(tipo_empresa_valor) if tipo_empresa_valor in opcoes_empresa else 0
+        tipo_empresa = st.selectbox("Tipo de Empresa", opcoes_empresa, index=tipo_empresa_index, key=f"empresa_{prefix}")
 
-        tipo_empresa_valor = dados.get("Tipo de Empresa", opcoes_empresa[0])
-        if tipo_empresa_valor in opcoes_empresa:
-            tipo_empresa_index = opcoes_empresa.index(tipo_empresa_valor)
-        else:
-            tipo_empresa_index = 0
+        contato = st.text_input("Contato", value=dados.get("Contato", ""), key=f"cont_{prefix}")
 
-        tipo_empresa = st.selectbox(
-            "Tipo de Empresa",
-            opcoes_empresa,
-            index=tipo_empresa_index,
-            key=f"empresa_{prefix}"
-        )
-
-
-        contato = st.text_input("Contato", value=dados["Contato"], key=f"cont_{prefix}")
-
-        opcoes_militar = [
-            "Asp Of D'Lauan",
-            "2° Sgt Tamilla",
-            "2° Sgt Ribeiro",
-            "2° Sgt Éderson"
-        ]
-
-        militar_valor = dados.get("Militar Responsável", opcoes_militar[0])
-        if militar_valor in opcoes_militar:
-            militar_index = opcoes_militar.index(militar_valor)
-        else:
-            militar_index = 0
-
-        militar = st.selectbox(
-            "Militar Responsável",
-            opcoes_militar,
-            index=militar_index,
-            key=f"mil_{prefix}"
-        )
-
+        opcoes_militar = ["Asp Of D'Lauan", "2° Sgt Tamilla", "2° Sgt Ribeiro", "2° Sgt Éderson"]
+        militar_valor = dados.get("Militar Responsável") or opcoes_militar[0]
+        militar_index = opcoes_militar.index(militar_valor) if militar_valor in opcoes_militar else 0
+        militar = st.selectbox("Militar Responsável", opcoes_militar, index=militar_index, key=f"mil_{prefix}")
 
         opcoes_andamento = [
             "Protocolado",
@@ -244,64 +157,34 @@ def formulario_protocolo(dados=None, prefix=""):
             "Empresa Encerrou",
             "Empresa/Proprietário Não Localizado"
         ]
-
-
-        andamento_valor = dados.get("Andamento", opcoes_andamento[0])
-        if andamento_valor in opcoes_andamento:
-            andamento_index = opcoes_andamento.index(andamento_valor)
-        else:
-            andamento_index = 0
-
-        andamento = st.selectbox(
-            "Andamento",
-            opcoes_andamento,
-            index=andamento_index,
-            key=f"and_{prefix}"
-        )
-
+        andamento_valor = dados.get("Andamento") or opcoes_andamento[0]
+        andamento_index = opcoes_andamento.index(andamento_valor) if andamento_valor in opcoes_andamento else 0
+        andamento = st.selectbox("Andamento", opcoes_andamento, index=andamento_index, key=f"and_{prefix}")
 
         opcoes_cidade = [
-            "Porangatu",
-            "Santa Tereza",
-            "Estrela do Norte",
-            "Formoso",
-            "Trombas",
-            "Novo Planalto",
-            "Montividiu",
-            "Mutunópolis"
+            "Porangatu", "Santa Tereza", "Estrela do Norte", "Formoso",
+            "Trombas", "Novo Planalto", "Montividiu", "Mutunópolis"
         ]
-
-        cidade_valor = dados.get("Cidade", opcoes_cidade[0])
-        if cidade_valor in opcoes_cidade:
-            cidade_index = opcoes_cidade.index(cidade_valor)
-        else:
-            cidade_index = 0
-
-        cidade = st.selectbox(
-            "Cidade",
-            opcoes_cidade,
-            index=cidade_index,
-            key=f"cid_{prefix}"
-        )
-
-
+        cidade_valor = dados.get("Cidade") or opcoes_cidade[0]
+        cidade_index = opcoes_cidade.index(cidade_valor) if cidade_valor in opcoes_cidade else 0
+        cidade = st.selectbox("Cidade", opcoes_cidade, index=cidade_index, key=f"cid_{prefix}")
 
     return {
-    "Data de Protocolo": data_raw,
-    "Nº de Protocolo": protocolo,
-    "Tipo de Serviço": tipo,
-    "CPF/CNPJ": cpf,
-    "Nome Fantasia": nome,
-    "Área (m²)": area,
-    "Notificação": notificacao,
-    "Validade do Boleto": validade_boleto,
-    "Validade do Cercon": validade_cercon,
-    "Tipo de Empresa": tipo_empresa,
-    "Contato": contato,
-    "Militar Responsável": militar,
-    "Andamento": andamento,
-    "Cidade": cidade
-}
+        "Data de Protocolo": data_raw,
+        "Nº de Protocolo": protocolo,
+        "Tipo de Serviço": tipo,
+        "CPF/CNPJ": cpf,
+        "Nome Fantasia": nome,
+        "Área (m²)": area,
+        "Notificação": notificacao,
+        "Validade do Boleto": validade_boleto,
+        "Validade do Cercon": validade_cercon,
+        "Tipo de Empresa": tipo_empresa,
+        "Contato": contato,
+        "Militar Responsável": militar,
+        "Andamento": andamento,
+        "Cidade": cidade
+    }
 
 
 
