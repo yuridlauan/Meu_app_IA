@@ -195,53 +195,22 @@ def formulario_protocolo(dados=None, prefix=""):
 def app(TABELA):
     st.title(f"📂 Gerenciamento de Protocolos — {TABELA}")
 
-    # Carrega todos os dados da tabela
-    df_all = carregar_dados(TABELA)
+    # Teste: Carrega dados e mostra preview
+    try:
+        df_all = carregar_dados(TABELA)
 
-    # Busca geral (aplica só na aba "Protocolos Encontrados")
-    termo = st.text_input("🔎 Buscar protocolo (por nome, CPF, militar, tipo...)")
-    df = df_all.copy()
-    if termo:
-        termo_low = termo.lower()
-        df = df[df.apply(lambda r: termo_low in str(r.values).lower(), axis=1)]
+        st.success("✅ Planilha carregada com sucesso.")
+        st.write("🔍 Primeiras linhas da planilha:")
+        st.dataframe(df_all.head())
 
-    # ----------------- CADASTRAR NOVO PROTOCOLO -----------------
-    with st.expander("➕ Cadastrar Novo Protocolo", expanded=False):
-        dados_novos = formulario_protocolo(prefix="novo")
+        st.write("📊 Colunas presentes:", df_all.columns.tolist())
+        st.write("🧼 Quantidade de valores vazios por coluna:")
+        st.write(df_all.isna().sum())
 
-        if st.button("💾 Salvar Novo Protocolo", key="salvar_novo"):
-            try:
-                data_protocolo = datetime.strptime(dados_novos["Data de Protocolo"], "%d/%m/%Y").date()
-                validade_boleto = datetime.strptime(dados_novos["Validade do Boleto"], "%d/%m/%Y").date()
-                validade_cercon = datetime.strptime(dados_novos["Validade do Cercon"], "%d/%m/%Y").date()
-            except ValueError:
-                st.error("❌ Uma das datas está em formato inválido. Use dd/mm/aaaa.")
-                st.stop()
+    except Exception as e:
+        st.error(f"❌ Erro ao carregar planilha: {e}")
+        st.stop()
 
-            novo = {
-                "ID": cria_id(),
-                "Data de Protocolo": data_protocolo.strftime("%d/%m/%Y"),
-                "Nº de Protocolo": dados_novos["Nº de Protocolo"],
-                "Tipo de Serviço": dados_novos["Tipo de Serviço"],
-                "CPF/CNPJ": dados_novos["CPF/CNPJ"],
-                "Nome Fantasia": dados_novos["Nome Fantasia"],
-                "Área (m²)": dados_novos["Área (m²)"],
-                "Notificação": dados_novos["Notificação"],
-                "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
-                "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
-                "Tipo de Empresa": dados_novos["Tipo de Empresa"],
-                "Contato": dados_novos["Contato"],
-                "Militar Responsável": dados_novos["Militar Responsável"],
-                "Andamento": dados_novos["Andamento"],
-                "Cidade": dados_novos["Cidade"]
-
-            }
-            insert(TABELA, novo)
-            st.success("✅ Novo protocolo salvo com sucesso!")
-            st.rerun()
-
-    st.divider()
-    st.subheader(f"📋 Protocolos Encontrados: {len(df)}")
 
     # -----------------------------------------------------------
     #       PREPARO DOS DATAFRAMES PARA FILTROS DE CERCON
