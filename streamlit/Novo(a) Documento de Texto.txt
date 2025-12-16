@@ -1,3 +1,0 @@
-[gmail]
-usuario = "meuappcomiasenha@gmail.com"
-senhaapp = "uylqimevkhatmarb"

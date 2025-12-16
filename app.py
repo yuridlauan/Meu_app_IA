@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
 
+st.write("✅ Importações básicas concluídas.")
 
 from paginas import atualizar_ids
 from funcoes_compartilhadas import conversa_banco
@@ -16,8 +16,9 @@ from funcoes_compartilhadas.controle_acesso import (
     require_login, 
 )
 
+st.write("✅ Módulos e funções importados com sucesso.")
+
 # ──────────────────────────────────────────────────────────────────────────────
-# Cache de dados
 @st.cache_data
 def carregar_menus():
     return conversa_banco.select("menus", {
@@ -25,7 +26,6 @@ def carregar_menus():
         "Nome": "texto",
         "Ordem": "numero100",
     })
-
 
 @st.cache_data
 def carregar_funcionalidades():
@@ -36,56 +36,32 @@ def carregar_funcionalidades():
         "Caminho": "texto",
     })
 
+st.write("✅ Funções de cache definidas.")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Recuperação de senha (via query param)
-def reload_module(path: str):
-    if path in sys.modules:
-        return importlib.reload(sys.modules[path])
-    return importlib.import_module(path)
-
-
 query_params = st.query_params.to_dict()
 if query_params.get("recuperar") == "1":
+    st.write("🔁 Modo recuperação de senha ativado")
     mod = reload_module("paginas.redefinir_senha")
     mod.app()
     st.stop()
 
+st.write("✅ Query params verificados.")
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Configuração inicial
 st.set_page_config(
     page_title="Meu App com I.A.",
     page_icon="⚡",
     layout="wide"
 )
 
+st.write("✅ Configuração da página aplicada.")
+
 aplicar_estilo_padrao()
+st.write("✅ Estilo padrão aplicado.")
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Ajustes visuais do menu
-st.markdown("""
-<style>
-[data-testid="stSidebar"] .stRadio > div {
-    flex-direction: column;
-    gap: 0.3rem;
-}
-[data-testid="stSidebar"] label {
-    align-items: center;
-    display: flex;
-    gap: 0.5rem;
-    word-break: break-word;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Ajustes HTML (idioma)
+# HTML ajustes
 components.html(
-    """
-    <script>
+    """<script>
       const root = parent.document.documentElement;
       root.setAttribute('lang', 'pt-BR');
       root.setAttribute('translate', 'no');
@@ -93,13 +69,12 @@ components.html(
       meta.name = 'google';
       meta.content = 'notranslate';
       parent.document.head.appendChild(meta);
-    </script>
-    """,
+    </script>""",
     height=0,
 )
 
+st.write("✅ HTML customizado.")
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Título dinâmico da aba
 def set_tab_title(title: str, icon_url: str | None = None):
     js = f"""<script>document.title = "{title}";"""
@@ -115,20 +90,23 @@ def set_tab_title(title: str, icon_url: str | None = None):
     js += "</script>"
     st.markdown(js, unsafe_allow_html=True)
 
-
-# ──────────────────────────────────────────────────────────────────────────────
 # 🔐 LOGIN
+st.write("🔐 Iniciando controle de login...")
 require_login()
+st.write("✅ Login realizado ou validado.")
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# SIDEBAR – MENUS E PERMISSÕES
+# SIDEBAR
+st.write("📥 Carregando menus e funcionalidades...")
 menus = carregar_menus()
 funcionalidades = carregar_funcionalidades()
+st.write("✅ Menus e funcionalidades carregados.")
 
+# Continuação do código...
 menus = menus.sort_values(by="Ordem")
+st.write("✅ Menus ordenados.")
 
-permissoes = menus_liberados()  # None → admin (acesso total)
+permissoes = menus_liberados()
+st.write(f"✅ Permissões carregadas: {permissoes}")
 
 if permissoes is not None:
     funcionalidades = funcionalidades[
@@ -136,6 +114,7 @@ if permissoes is not None:
             [str(p["ID_Funcionalidade"]) for p in permissoes]
         )
     ]
+    st.write("✅ Funcionalidades filtradas por permissões.")
 
 menu_disponivel = {}
 for _, menu in menus.iterrows():
@@ -148,17 +127,18 @@ for _, menu in menus.iterrows():
             for _, row in itens.iterrows()
         }
 
+st.write(f"✅ Menus disponíveis: {list(menu_disponivel.keys())}")
+
 if not menu_disponivel:
     st.warning("⚠️ Você não tem acesso a nenhum menu.")
     st.stop()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# MENU LATERAL
+# SIDEBAR – MENU
 st.sidebar.image("imagens/logo.png", use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
 area = st.sidebar.selectbox("Área:", list(menu_disponivel.keys()))
+st.write(f"✅ Área selecionada: {area}")
 
 funcionalidades_disp = menu_disponivel[area]
 rotulo = st.sidebar.radio(
@@ -166,21 +146,24 @@ rotulo = st.sidebar.radio(
     ["Selecionar..."] + list(funcionalidades_disp.values()),
     index=0
 )
+st.write(f"✅ Funcionalidade selecionada: {rotulo}")
 
-# 🔥 LOGOUT SEMPRE NO FINAL DO SIDEBAR
 logoutX()
+st.write("✅ Logout exibido no sidebar.")
 
 if rotulo == "Selecionar...":
+    st.write("ℹ️ Nenhuma funcionalidade selecionada ainda.")
     st.stop()
 
-
-# ──────────────────────────────────────────────────────────────────────────────
 # CORPO DO APP
 arquivo = next(k for k, v in funcionalidades_disp.items() if v == rotulo)
 set_tab_title(f"{rotulo} — Meu App")
+st.write(f"✅ Carregando módulo: paginas.{arquivo}")
 
 try:
     mod = __import__(f"paginas.{arquivo}", fromlist=["app"])
     mod.app()
+    st.write("✅ Módulo carregado com sucesso.")
 except Exception as e:
-    st.error(f"Erro ao carregar a página '{arquivo}': {e}")
+    st.error(f"❌ Erro ao carregar a página '{arquivo}': {e}")
+    st.write("📛 Detalhes do erro:", e)
