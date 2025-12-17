@@ -101,8 +101,10 @@ tzlocal==5.3.1
 urllib3==2.5.0
 validators==0.35.0
 watchdog==6.0.0
-streamlit-cookies-manager
-reportlab
+watchdog==6.0.0
+streamlit-cookies-manager==0.2.0
+reportlab==4.4.6
+
 
 
 
