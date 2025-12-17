@@ -6,7 +6,7 @@ from google.oauth2.service_account import Credentials
 CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
 
 # Link da sua planilha (verifique se está certo!)
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit#gid=0"
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit"
 
 # Carrega a credencial
 with open(CAMINHO_CREDENCIAL, "r", encoding="utf-8") as f:

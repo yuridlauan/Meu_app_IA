@@ -135,8 +135,8 @@ def formulario_protocolo(dados=None, prefix=""):
         validade_boleto_auto = (data_dt + timedelta(days=30)).strftime("%d/%m/%Y") if data_dt else dados.get("Validade do Boleto", "")
         validade_boleto = st.text_input("Validade do Boleto (dd/mm/aaaa)", value=validade_boleto_auto, key=f"valboleto_{prefix}")
 
-        validade_cercon_auto = (data_dt + timedelta(days=365)).strftime("%d/%m/%Y") if data_dt else dados.get("Validade do Cercon", "")
-        validade_cercon = st.text_input("Validade do Cercon (dd/mm/aaaa)", value=validade_cercon_auto, key=f"valcercon_{prefix}")
+        validade_cercon = st.text_input("Validade do Cercon (dd/mm/aaaa)", value=dados.get("Validade do Cercon", ""), key=f"valcercon_{prefix}")
+
 
         opcoes_empresa = ["Regular", "Isento", "MEI", "Evento Temporário"]
         tipo_empresa_valor = dados.get("Tipo de Empresa") or opcoes_empresa[0]
@@ -155,7 +155,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Vistoria Feita",
             "Cercon Impresso",
             "Empresa Encerrou",
-            "Empresa/Proprietário Não Localizado"
+            "Empresa/Proprietário Não Localizado",
+            "Não Certificou"
         ]
         andamento_valor = dados.get("Andamento") or opcoes_andamento[0]
         andamento_index = opcoes_andamento.index(andamento_valor) if andamento_valor in opcoes_andamento else 0
@@ -289,29 +290,51 @@ def app(TABELA):
     df_alert["Boleto_dt"] = pd.to_datetime(df_alert["Validade do Boleto"], format="%d/%m/%Y", errors="coerce")
     df_alert["DataProt_dt"] = pd.to_datetime(df_alert["Data de Protocolo"],format="%d/%m/%Y",dayfirst=True,errors="coerce") 
     
-    # --- Cálculos ---
-    qtd_novos = df_alert[df_alert["DataProt_dt"].dt.date == hoje].shape[0]
+    ids_exibidos = set()
 
-    qtd_proximos = df_alert[
+    # --- CERCONS PRÓXIMOS ---
+    df_proximos = df_alert[
         (df_alert["Validade_dt"] >= pd.Timestamp(hoje)) &
         (df_alert["Validade_dt"] <= pd.Timestamp(limite_proximo))
-    ].shape[0]
+    ]
+    df_proximos = df_proximos[~df_proximos["ID"].isin(ids_exibidos)]
+    ids_exibidos.update(df_proximos["ID"])
+    qtd_proximos = df_proximos.shape[0]
 
-    qtd_vencidos = df_alert[
+    # --- CERCONS VENCIDOS ---
+    df_vencidos = df_alert[
         (df_alert["Validade_dt"] < pd.Timestamp(hoje)) &
         (df_alert["Validade_dt"] >= pd.Timestamp(limite_vencidos))
-    ].shape[0]
+    ]
+    df_vencidos = df_vencidos[~df_vencidos["ID"].isin(ids_exibidos)]
+    ids_exibidos.update(df_vencidos["ID"])
+    qtd_vencidos = df_vencidos.shape[0]
 
-    qtd_expirados = df_alert[
-    (
-        (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) &
-        (df_alert["Andamento"] != "Cercon Impresso")
-    ) | (
-        (df_alert["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
-        (df_alert["Andamento"] != "Cercon Impresso")
-    )
-    ].shape[0]
+    # --- EXPIRADOS ---
+    df_expirados = df_alert[
+        (
+            (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) |
+            (df_alert["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje))
+        ) & df_alert["Andamento"].isin(["Protocolado", "Vistoria Feita"])
+    ]
+    df_expirados = df_expirados[~df_expirados["ID"].isin(ids_exibidos)]
+    ids_exibidos.update(df_expirados["ID"])
+    qtd_expirados = df_expirados.shape[0]
 
+    # --- SEM CERCON ---
+    df_semcercon = df_alert[
+        (df_alert["Andamento"] == "Não Certificou") |
+        (
+            (df_alert["Boleto_dt"] + pd.Timedelta(days=150) < pd.Timestamp(hoje)) &
+            (df_alert["Andamento"] != "Cercon Impresso")
+        )
+    ]
+    df_semcercon = df_semcercon[~df_semcercon["ID"].isin(ids_exibidos)]
+    ids_exibidos.update(df_semcercon["ID"])
+    qtd_semcercon = df_semcercon.shape[0]
+
+    # --- NOVOS ---
+    qtd_novos = df_alert[df_alert["DataProt_dt"].dt.date == hoje].shape[0]
 
 
     # --- Construção dos badges ---
@@ -319,13 +342,14 @@ def app(TABELA):
     ABA2 = f"🟨 Cercons Próximos ({qtd_proximos})" if qtd_proximos > 0 else "🟨 Cercons Próximos (0)"
     ABA3 = f"🟥 Cercons Vencidos ({qtd_vencidos})" if qtd_vencidos > 0 else "🟥 Cercons Vencidos (0)"
     ABA4 = f"⚠️ Expirados ({qtd_expirados})" if qtd_expirados > 0 else "⚠️ Expirados (0)"
-    ABA5 = f"🆕 Novos Hoje ({qtd_novos})" if qtd_novos > 0 else "🆕 Novos Hoje (0)"
+    ABA5 = f"🆕 Novos ({qtd_novos})" if qtd_novos > 0 else "🆕 Novos (0)"
+    ABA6 = f"⛔ Sem Cercon ({qtd_semcercon})" if qtd_semcercon > 0 else "⛔ Sem Cercon (0)"
 
     # --- Cria as abas com badges ---
     # --- Cria as abas com badges ---
-    aba_princ, aba_prox, aba_venc, aba_exp, aba_novos = st.tabs([
-        ABA1, ABA2, ABA3, ABA4, ABA5
-    ])
+    aba_princ, aba_prox, aba_venc, aba_exp, aba_novos, aba_semcercon = st.tabs([
+    ABA1, ABA2, ABA3, ABA4, ABA5, ABA6
+])
 
 
 
@@ -389,9 +413,7 @@ def app(TABELA):
                             st.info("✅ Exclusão cancelada.")
                             st.session_state[confirma_key] = False
 
-    # ---------------------------
-    # 2️⃣ ABA: CERCONS PRÓXIMOS AO VENCIMENTO (≤ 30 DIAS)
-    # ---------------------------
+
     # ---------------------------
 # 2️⃣ ABA: CERCONS PRÓXIMOS AO VENCIMENTO (≤ 30 DIAS)
 # ---------------------------
@@ -408,7 +430,13 @@ def app(TABELA):
         else:
             for _, row in df_proximos.iterrows():
 
-                with st.expander(f"🟨 {row['Nº de Protocolo']} — {row['Nome Fantasia']}", expanded=False):
+                # Verifica se o campo "Notificação" está como "Notificado"
+                notificado = str(row.get("Notificação", "")).strip().lower() == "notificado"
+                rotulo_notif = " — ✅ Notificado" if notificado else ""
+
+                # Título do expander com status
+                with st.expander(f"🟨 {row['Nº de Protocolo']} — {row['Nome Fantasia']}{rotulo_notif}", expanded=False):
+
 
                     dados = formulario_protocolo(row, prefix=f"prox_{row['ID']}")
 
@@ -472,7 +500,13 @@ def app(TABELA):
 
                 dias_vencidos = (hoje - row["Validade_dt"].date()).days if pd.notna(row["Validade_dt"]) else "N/A"
 
-                with st.expander(f"🟥 {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({dias_vencidos} dias vencido)", expanded=False):
+                # Verifica se está notificado
+                notificado = str(row.get("Notificação", "")).strip().lower() == "notificado"
+                rotulo_notif = " — ✅ Notificado" if notificado else ""
+
+                # Mostra no título do expander
+                # Monta o título do expander com o status
+                with st.expander(f"🟨 {row['Nº de Protocolo']} — {row['Nome Fantasia']}{rotulo_notif}", expanded=False):
 
                     dados = formulario_protocolo(row, prefix=f"venc_{row['ID']}")
 
@@ -521,17 +555,16 @@ def app(TABELA):
     with aba_exp:
         st.markdown("### ⚠️ Processos Expirados")
 
-        # 🔹 Critério 1: Boleto vencido e andamento ≠ Cercon Impresso
+        # 🔹 Critério 1: Boleto vencido e andamento = Protocolado ou Vistoria Feita
         boleto_vencido = (
             (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
-            (df_temp["Andamento"] != "Cercon Impresso")
+            (df_temp["Andamento"].isin(["Protocolado", "Vistoria Feita"]))
         )
 
-        # 🔹 Critério 2: Inatividade
-        # (120 dias após vencimento do boleto e andamento ≠ Cercon Impresso)
+        # 🔹 Critério 2: Inatividade (> 120 dias do boleto) e andamento = Protocolado ou Vistoria Feita
         inatividade = (
             (df_temp["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
-            (df_temp["Andamento"] != "Cercon Impresso")
+            (df_temp["Andamento"].isin(["Protocolado", "Vistoria Feita"]))
         )
 
         df_expirados = df_temp[
@@ -606,8 +639,6 @@ def app(TABELA):
                         elif cancela:
                             st.session_state[confirma_key] = False
 
-
-
     # ---------------------------
 # 5️⃣ ABA: NOVOS PROTOCOLOS CADASTRADOS HOJE
 # ---------------------------
@@ -667,6 +698,53 @@ def app(TABELA):
                                 st.rerun()
                             elif cancela:
                                 st.session_state[confirma_key] = False
+
+    # ---------------------------
+# 6️⃣ ABA: SEM CERCON
+# ---------------------------
+    with aba_semcercon:
+        df_semcercon = df_alert[
+            (df_alert["Andamento"] == "Não Certificou") |
+            (
+                (df_alert["Boleto_dt"] + pd.Timedelta(days=150) < pd.Timestamp(hoje)) &
+                (df_alert["Andamento"] != "Cercon Impresso")
+            )
+        ]
+
+        if df_semcercon.empty:
+            st.info("Nenhum protocolo sem Cercon.")
+        else:
+            for _, row in df_semcercon.iterrows():
+                with st.expander(f"🧾 {row['Nº de Protocolo']} — {row['Nome Fantasia']}"):
+                    dados = formulario_protocolo(row, prefix=f"{row['ID']}_semcercon")
+
+
+                    with st.form(key=f"form_semcercon_{row['ID']}"):
+                        col1, col2 = st.columns(2)
+                        atualizar = col1.form_submit_button("💾 Atualizar")
+                        excluir = col2.form_submit_button("🗑️ Excluir")
+
+                        if atualizar:
+                            update(
+                                TABELA,
+                                list(dados.keys()),
+                                list(dados.values()),
+                                where=f"ID,eq,{row['ID']}",
+                                tipos_colunas=TIPOS_COLUNAS
+                            )
+                            st.success("✅ Protocolo atualizado com sucesso!")
+                            st.rerun()
+
+                        if excluir:
+                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
+                            st.warning("⚠️ Protocolo excluído.")
+                            st.rerun()
+
+
+
+
+
+
 
 
 

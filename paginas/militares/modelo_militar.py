@@ -89,28 +89,54 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
         
 
     df["DataProt_dt"] = pd.to_datetime(df["Data de Protocolo"], dayfirst=True, errors="coerce")
-
     hoje = date.today()
-    semana = hoje - timedelta(days=7)
-    df_novos = df[df["DataProt_dt"] >= pd.Timestamp(semana)]
+    sete_dias_atras = hoje - timedelta(days=7)
 
-        # Novos critérios com base em "Andamento"
     df_atr = df[df["Militar Responsável"] == nome_militar]
-    df_and = df_atr[df_atr["Andamento"].isin(["Protocolado", "Vistoria Feita"])]
-    df_conc = df_atr[df_atr["Andamento"] == "Cercon Impresso"]
-    df_pend = df_atr[df_atr["Andamento"] == "Empresa/Proprietário Não Localizado"]
+
+    # 🔒 Controle de IDs já exibidos para evitar repetições nas abas
+    ids_exibidos = set()
+
+    # 🟡 Em andamento
+    df_and = df_atr[
+        df_atr["Andamento"].isin(["Protocolado", "Vistoria Feita"]) &
+        (~df_atr["ID"].isin(ids_exibidos))
+    ]
+    ids_exibidos.update(df_and["ID"])
+
+    # 🟢 Concluídos
+    df_conc = df_atr[
+        df_atr["Andamento"].isin(["Cercon Impresso", "Empresa Encerrou"]) &
+        (~df_atr["ID"].isin(ids_exibidos))
+    ]
+    ids_exibidos.update(df_conc["ID"])
+
+    # 🔴 Pendentes
+    df_pend = df_atr[
+        (df_atr["Andamento"] == "Empresa/Proprietário Não Localizado") &
+        (~df_atr["ID"].isin(ids_exibidos))
+    ]
+    ids_exibidos.update(df_pend["ID"])
+
+    # 🆕 Novos atribuídos nos últimos 7 dias
+    df_novos = df_atr[
+        (df_atr["DataProt_dt"].dt.date >= sete_dias_atras) &
+        (~df_atr["ID"].isin(ids_exibidos))
+    ]
+    ids_exibidos.update(df_novos["ID"])
 
 
-    # 📅 AQUI VAI A NOVA ABA DE EVENTOS
-    aba_eventos, aba_est, aba_novos, aba_atr, aba_and, aba_conc, aba_pend = st.tabs([
+
+
+    aba_eventos, aba_est, aba_novos, aba_and, aba_conc, aba_pend = st.tabs([
     f"📅 Eventos",
     f"📊 Estatísticas",
     f"🆕 Novos (7 dias) ({len(df_novos)})",
-    f"📘 Atribuídos ({len(df_atr)})",
     f"🟡 Em andamento ({len(df_and)})",
     f"🟢 Concluídos ({len(df_conc)})",
     f"🔴 Pendentes ({len(df_pend)})"
 ])
+
 
 
     with aba_eventos:
@@ -198,8 +224,6 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
     # TABS EXISTENTES
     with aba_novos:
         listar_protocolos(df_novos, TABELA, "novos")
-    with aba_atr:
-        listar_protocolos(df_atr, TABELA, "atribuido")
     with aba_and:
         listar_protocolos(df_and, TABELA, "andamento")
     with aba_conc:
@@ -218,7 +242,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
         andamento_map = {
         "Em andamento": ["Protocolado", "Vistoria Feita"],
-        "Concluídos": ["Cercon Impresso"],
+        "Concluídos": ["Cercon Impresso", "Empresa Encerrou"],
         "Pendentes": ["Empresa/Proprietário Não Localizado"],
     }
 
