@@ -3,6 +3,13 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
+
+print("🚀 App inicializando – vamos ver a sequência de logs!")
+
 
 from funcoes_compartilhadas import conversa_banco
 from funcoes_compartilhadas.estilos import aplicar_estilo_padrao
