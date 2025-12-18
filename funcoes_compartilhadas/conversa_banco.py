@@ -38,7 +38,20 @@ _scopes = [
 ]
 
 # Carrega credenciais do painel Secrets do Streamlit
-credenciais_json = st.secrets["gdrive_credenciais"]
+import json
+
+# Carrega o JSON direto do arquivo, para uso fora do Streamlit
+CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
+with open(CAMINHO_CREDENCIAL, "r", encoding="utf-8") as f:
+    credenciais_json = json.load(f)
+
+_gc = gspread.authorize(
+    Credentials.from_service_account_info(
+        credenciais_json,
+        scopes=_scopes
+    )
+)
+
 
 
 # Cria credencial segura sem arquivo físico
