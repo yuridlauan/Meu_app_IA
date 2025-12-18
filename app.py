@@ -120,16 +120,6 @@ def set_tab_title(title: str, icon_url: str | None = None):
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 🔐 LOGIN
-st.write("### Iniciando app...")
-
-try:
-    st.write("Tentando conexão com Google Sheets...")
-    df_test = conversa_banco.select(TABELA_USUARIOS, TIPOS_USUARIOS)
-    st.write("Conexão com Google Sheets OK! Linhas:", len(df_test))
-except Exception as e:
-    st.error("Erro ao conectar com Google Sheets:")
-    st.error(str(e))
-    st.stop()
 
 require_login()
 
