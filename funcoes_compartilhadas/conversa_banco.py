@@ -29,38 +29,31 @@ import json
 # ===================================================
 # 🔐 CREDENCIAIS VIA STREAMLIT SECRETS
 # ===================================================
-
+# 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit"
-
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Carrega credenciais do painel Secrets do Streamlit
-import json
+# 🔐 Tenta pegar as credenciais do Streamlit Cloud
+try:
+    credenciais_json = st.secrets["gdrive_credenciais"]
+except Exception:
+    # 🌐 Se falhar, usa arquivo local (modo desenvolvimento)
+    with open("credenciais/gdrive_credenciais.json", "r", encoding="utf-8") as f:
+        import json
+        credenciais_json = json.load(f)
 
-# Carrega o JSON direto do arquivo, para uso fora do Streamlit
-CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
-with open(CAMINHO_CREDENCIAL, "r", encoding="utf-8") as f:
-    credenciais_json = json.load(f)
-
-_gc = gspread.authorize(
-    Credentials.from_service_account_info(
-        credenciais_json,
-        scopes=_scopes
-    )
-)
-
-
-
-# Cria credencial segura sem arquivo físico
+# 🔐 Autoriza acesso
 _gc = gspread.authorize(
     Credentials.from_service_account_info(credenciais_json, scopes=_scopes)
 )
 
-# Abre a planilha
+# 🔗 Abre a planilha
 _sheet = _gc.open_by_url(URL_PLANILHA)
+
+
 
 
 # ===================================================
