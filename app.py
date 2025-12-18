@@ -14,6 +14,8 @@ from funcoes_compartilhadas.controle_acesso import (
     menus_liberados,
     logoutX,
     require_login, 
+     TABELA_USUARIOS,
+    TIPOS_USUARIOS
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
