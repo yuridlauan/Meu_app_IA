@@ -3,12 +3,6 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-logging.getLogger().setLevel(logging.DEBUG)
-
-print("🚀 App inicializando – vamos ver a sequência de logs!")
 
 
 from funcoes_compartilhadas import conversa_banco
@@ -81,9 +75,17 @@ if query_params.get("recuperar") == "1":
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 🔐 LOGIN (ANTES DE QUALQUER CONEXÃO COM BANCO)
-if not usuario_logado():
-    login()
-    st.stop()
+# 🔐 [LOGIN DESATIVADO TEMPORARIAMENTE]
+st.warning("⚠️ LOGIN DESATIVADO TEMPORARIAMENTE PARA DEPURAÇÃO")
+
+# Simula um login manual para continuar o fluxo
+st.session_state["usuario_logado"] = {
+    "ID": "admin",  # Pode colocar qualquer valor existente na aba usuarios
+    "Nome": "Admin",
+    "Email": "admin@email.com",
+    "Tipo": "admin"
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 🔗 A PARTIR DAQUI, PODE ACESSAR O BANCO COM SEGURANÇA
