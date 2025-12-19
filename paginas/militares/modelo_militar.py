@@ -21,8 +21,8 @@ def listar_protocolos(df_filtrado, TABELA, contexto):
             titulo = f"{cidade} | {titulo}"
 
         with st.expander(titulo):
-            id_linha = str(row["ID"]) if pd.notna(row["ID"]) else f"linha_{_}"
-            prefix = f"{contexto}_{id_linha}"
+            id_linha = str(row["ID"]) if pd.notna(row["ID"]) else "sem_id"
+            prefix = f"{contexto}_{id_linha}_{_}"  # _ é o índice da linha (garante unicidade)
 
             dados = formulario_protocolo(row, prefix=prefix)
 
@@ -30,7 +30,7 @@ def listar_protocolos(df_filtrado, TABELA, contexto):
             if confirma_key not in st.session_state:
                 st.session_state[confirma_key] = False
 
-            with st.form(f"form_{contexto}_{row['ID']}"):
+            with st.form(f"form_{prefix}"):
                 c1, c2 = st.columns(2)
                 atualizar = c1.form_submit_button("💾 Atualizar")
                 excluir = c2.form_submit_button("🗑️ Excluir")
