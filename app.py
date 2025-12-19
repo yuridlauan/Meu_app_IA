@@ -11,7 +11,24 @@ from funcoes_compartilhadas import conversa_banco
 
 # ─── Redireciona para redefinir senha se necessário ───────────────────────────
 from urllib.parse import parse_qs
-query_params = st.query_params.to_dict()
+def _query_params_dict() -> dict:
+    qp = getattr(st, "query_params", None)
+    if qp is not None:
+        try:
+            return qp.to_dict()
+        except Exception:
+            try:
+                return dict(qp)
+            except Exception:
+                return {}
+    # fallback para versões antigas
+    try:
+        return st.experimental_get_query_params()
+    except Exception:
+        return {}
+
+
+query_params = _query_params_dict()
 if query_params.get("recuperar") == "1":
 
 

@@ -1,15 +1,3 @@
-"""
-Utilitário para formatar credenciais de service account nos formatos aceitos pelo
-Streamlit:
-
-1) Bloco TOML (recomendado no Streamlit Cloud)
-2) String JSON única para atribuição direta no secrets
-
-Uso:
-    python formatar_gdrive_secrets.py --input credenciais.json
-    python formatar_gdrive_secrets.py --json '<JSON da credencial>'
-"""
-
 import argparse
 import json
 from typing import Any, Dict

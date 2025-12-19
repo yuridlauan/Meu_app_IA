@@ -148,7 +148,12 @@ def logoutX():
             del st.session_state[k]
 
         try:
-            st.query_params.clear()
+            qp = getattr(st, "query_params", None)
+            if qp is not None and hasattr(qp, "clear"):
+                qp.clear()
+            else:
+                # Compatibilidade com versões antigas do Streamlit
+                st.experimental_set_query_params()
         except Exception:
             pass
 
