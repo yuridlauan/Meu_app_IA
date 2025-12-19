@@ -21,7 +21,9 @@ def listar_protocolos(df_filtrado, TABELA, contexto):
             titulo = f"{cidade} | {titulo}"
 
         with st.expander(titulo):
-            prefix = f"{contexto}_{row['ID']}"
+            id_linha = str(row["ID"]) if pd.notna(row["ID"]) else f"linha_{_}"
+            prefix = f"{contexto}_{id_linha}"
+
             dados = formulario_protocolo(row, prefix=prefix)
 
             confirma_key = f"confirma_{contexto}_{row['ID']}"
