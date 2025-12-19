@@ -36,18 +36,45 @@ _scopes = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-try:
-    credenciais_json = st.secrets["gdrive_credenciais"]
-except Exception:
-    # 🌐 Se falhar, usa arquivo local (modo desenvolvimento)
-    with open("credenciais/gdrive_credenciais.json", "r", encoding="utf-8") as f:
-        import json
-        credenciais_json = json.load(f)
+def _carrega_credenciais():
+    """
+    Tenta carregar as credenciais a partir do secrets do Streamlit
+    e faz parse caso venham como string JSON (cenário comum no deploy).
+    """
+
+    try:
+        credenciais_brutas = st.secrets["gdrive_credenciais"]
+    except Exception:
+        # 🌐 Se falhar, usa arquivo local (modo desenvolvimento)
+        try:
+            with open("credenciais/gdrive_credenciais.json", "r", encoding="utf-8") as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            raise RuntimeError(
+                "⚠️ Credenciais do Google não encontradas. "
+                "Defina `gdrive_credenciais` no secrets ou adicione credenciais/gdrive_credenciais.json"
+            ) from e
+
+    if isinstance(credenciais_brutas, str):
+        try:
+            return json.loads(credenciais_brutas)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                "⚠️ O secret `gdrive_credenciais` precisa ser JSON válido ou tabela TOML. "
+                "No Streamlit Cloud, use a seção [gdrive_credenciais] em secrets ou cole o JSON completo."
+            ) from e
+
+    if isinstance(credenciais_brutas, dict):
+        return dict(credenciais_brutas)
+
+    raise RuntimeError(
+        "⚠️ Formato de `gdrive_credenciais` inválido. Informe como objeto JSON ou mapa TOML."
+    )
 
 
 # 🔐 Autoriza acesso
 _gc = gspread.authorize(
-    Credentials.from_service_account_info(credenciais_json, scopes=_scopes)
+     Credentials.from_service_account_info(_carrega_credenciais(), scopes=_scopes)
 )
 
 # 🔗 Abre a planilha
