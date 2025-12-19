@@ -89,8 +89,9 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
         
 
     df["DataProt_dt"] = pd.to_datetime(df["Data de Protocolo"], dayfirst=True, errors="coerce")
-    hoje = date.today()
-    sete_dias_atras = hoje - timedelta(days=7)
+    hoje = pd.Timestamp.today().normalize()
+    sete_dias_atras = hoje - pd.Timedelta(days=7)
+
 
     df_atr = df[df["Militar Responsável"] == nome_militar]
 
@@ -121,9 +122,10 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
     # 🆕 Novos atribuídos nos últimos 7 dias
     df_novos = df_atr[
     (df_atr["DataProt_dt"].notna()) &
-    (df_atr["DataProt_dt"].dt.date >= sete_dias_atras) &
+    (df_atr["DataProt_dt"] >= sete_dias_atras) &
     (~df_atr["ID"].isin(ids_exibidos))
 ]
+
 
 
 
