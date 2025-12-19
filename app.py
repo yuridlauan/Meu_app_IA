@@ -68,14 +68,18 @@ if not usuario_logado():
 
 # ─── MENU LATERAL ─────────────────────────────────────────────────────────────
 
-# 🔍 Busca menus e funcionalidades disponíveis no banco
-menus = conversa_banco.select("menus", {"ID": "id", "Nome": "texto", "Ordem": "numero100"})
-funcionalidades = conversa_banco.select("funcionalidades", {
-    "ID": "id",
-    "ID_Menu": "texto",
-    "Nome": "texto",
-    "Caminho": "texto",
-})
+# ─── SÓ DEPOIS DO LOGIN: Busca menus e funcionalidades do banco ───────────────
+try:
+    menus = conversa_banco.select("menus", {"ID": "id", "Nome": "texto", "Ordem": "numero100"})
+    funcionalidades = conversa_banco.select("funcionalidades", {
+        "ID": "id",
+        "ID_Menu": "texto",
+        "Nome": "texto",
+        "Caminho": "texto",
+    })
+except Exception as e:
+    st.error("⚠️ Erro ao acessar o banco de dados. Verifique as credenciais ou a planilha.")
+    st.stop()
 
 menus = menus.sort_values("Ordem")
 
