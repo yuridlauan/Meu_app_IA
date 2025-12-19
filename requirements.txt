@@ -104,6 +104,8 @@ watchdog==6.0.0
 watchdog==6.0.0
 streamlit-cookies-manager==0.2.0
 reportlab==4.4.6
+git+https://github.com/streamlit/gsheets-connection.git
+
 
 
 
