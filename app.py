@@ -10,9 +10,10 @@ from funcoes_compartilhadas.controle_acesso import login, usuario_logado, menus_
 from funcoes_compartilhadas import conversa_banco
 
 # ─── Redireciona para redefinir senha se necessário ───────────────────────────
-from urllib.parse import parse_qs, urlparse
-query_params = st.experimental_get_query_params()
-if query_params.get("recuperar", ["0"])[0] == "1":
+from urllib.parse import parse_qs
+query_params = st.query_params.to_dict()
+if query_params.get("recuperar") == "1":
+
 
     mod = importlib.reload(importlib.import_module("paginas.redefinir_senha"))
     mod.app()

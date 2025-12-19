@@ -36,14 +36,12 @@ _scopes = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-# 🔐 Tenta pegar as credenciais do Streamlit Cloud
 try:
     credenciais_json = st.secrets["gdrive_credenciais"]
-    st.success("✅ Credenciais carregadas via Streamlit Secrets.")
-except Exception as e:
-    st.error(f"❌ Erro ao carregar credenciais: {e}")
+except Exception:
     # 🌐 Se falhar, usa arquivo local (modo desenvolvimento)
     with open("credenciais/gdrive_credenciais.json", "r", encoding="utf-8") as f:
+        import json
         credenciais_json = json.load(f)
 
 
