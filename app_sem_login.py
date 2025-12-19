@@ -5,7 +5,7 @@ import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
-from paginas import atualizar_ids
+
 
 
 # 🔄 Garante que o buffer de inserções sempre exista
@@ -111,7 +111,7 @@ PAGINAS = {
         "cadastro_funcionalidades": "Cadastro de Funcionalidades",
         "cadastro_permissoes": "Cadastro de Permissões",
         "painel_financeiro": "Painel Financeiro",
-        "Atualizar IDs": "atualizar_ids"
+        "atualizar_ids": "Atualizar IDs"
     }
 }
 
