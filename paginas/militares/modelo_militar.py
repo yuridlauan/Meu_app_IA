@@ -120,10 +120,11 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
     # 🆕 Novos atribuídos nos últimos 7 dias
     df_novos = df_atr[
-        (df_atr["DataProt_dt"].dt.date >= sete_dias_atras) &
-        (~df_atr["ID"].isin(ids_exibidos))
-    ]
-    ids_exibidos.update(df_novos["ID"])
+    (df_atr["DataProt_dt"].notna()) &
+    (df_atr["DataProt_dt"].dt.date >= sete_dias_atras) &
+    (~df_atr["ID"].isin(ids_exibidos))
+]
+
 
 
 
