@@ -10,9 +10,10 @@ from funcoes_compartilhadas.controle_acesso import login, usuario_logado, menus_
 from funcoes_compartilhadas import conversa_banco
 
 # ─── Redireciona para redefinir senha se necessário ───────────────────────────
-from urllib.parse import parse_qs
-query_params = st.query_params.to_dict()
-if query_params.get("recuperar") == "1":
+from urllib.parse import parse_qs, urlparse
+query_params = st.experimental_get_query_params()
+if query_params.get("recuperar", ["0"])[0] == "1":
+
     mod = importlib.reload(importlib.import_module("paginas.redefinir_senha"))
     mod.app()
     st.stop()
@@ -68,18 +69,14 @@ if not usuario_logado():
 
 # ─── MENU LATERAL ─────────────────────────────────────────────────────────────
 
-# ─── SÓ DEPOIS DO LOGIN: Busca menus e funcionalidades do banco ───────────────
-try:
-    menus = conversa_banco.select("menus", {"ID": "id", "Nome": "texto", "Ordem": "numero100"})
-    funcionalidades = conversa_banco.select("funcionalidades", {
-        "ID": "id",
-        "ID_Menu": "texto",
-        "Nome": "texto",
-        "Caminho": "texto",
-    })
-except Exception as e:
-    st.error("⚠️ Erro ao acessar o banco de dados. Verifique as credenciais ou a planilha.")
-    st.stop()
+# 🔍 Busca menus e funcionalidades disponíveis no banco
+menus = conversa_banco.select("menus", {"ID": "id", "Nome": "texto", "Ordem": "numero100"})
+funcionalidades = conversa_banco.select("funcionalidades", {
+    "ID": "id",
+    "ID_Menu": "texto",
+    "Nome": "texto",
+    "Caminho": "texto",
+})
 
 menus = menus.sort_values("Ordem")
 

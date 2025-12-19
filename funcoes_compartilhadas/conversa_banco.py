@@ -278,5 +278,20 @@ def select_financeiro():
             df[col] = ""
 
     return df
+# TESTE RÁPIDO PARA VER SE CONECTA
+if __name__ == "__main__":
+    TIPOS_USUARIOS = {
+        "ID": "id",
+        "Nome": "texto",
+        "Email": "texto",
+        "Senha": "texto",
+    }
+
+    try:
+        df = select("usuarios", TIPOS_USUARIOS)
+        print(df)
+
+    except Exception as e:
+        print("❌ Erro ao acessar a planilha:", e)
 
 
