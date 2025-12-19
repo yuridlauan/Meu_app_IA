@@ -20,6 +20,7 @@ import time
 from functools import wraps
 from gspread.exceptions import APIError
 from funcoes_compartilhadas.cria_id import cria_id   # ⬅️ novo
+from collections.abc import Mapping
 
 # ===================================================
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
