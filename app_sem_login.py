@@ -111,7 +111,7 @@ PAGINAS = {
         "cadastro_funcionalidades": "Cadastro de Funcionalidades",
         "cadastro_permissoes": "Cadastro de Permissões",
         "painel_financeiro": "Painel Financeiro",
-        "Atualizar IDs": atualizar_ids.app
+        "Atualizar IDs": "atualizar_ids"
     }
 }
 

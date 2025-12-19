@@ -1,0 +1,3 @@
+from paginas import verifica_funcionalidades_invalidas
+
+verifica_funcionalidades_invalidas.app()

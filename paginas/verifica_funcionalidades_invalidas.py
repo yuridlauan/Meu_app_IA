@@ -15,7 +15,6 @@ def app():
     })
 
     funcionalidades["Caminho"] = funcionalidades["Caminho"].astype(str)
-
     problemas = []
 
     for i, row in funcionalidades.iterrows():
@@ -26,21 +25,30 @@ def app():
         # ─── Regras de validação ───────────────────────────────
         if " " in caminho:
             problemas.append((id_func, nome, caminho, "Contém espaço"))
-        elif not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', caminho):
-            problemas.append((id_func, nome, caminho, "Caracteres inválidos"))
-        elif caminho.endswith(".py"):
+            continue
+
+        if caminho.endswith(".py"):
             problemas.append((id_func, nome, caminho, "Não deve incluir .py"))
-        elif not os.path.exists(f"paginas/{caminho}.py"):
-            problemas.append((id_func, nome, caminho, "Arquivo não encontrado"))
+            continue
+
+        if not re.match(r'^[a-zA-Z0-9_.]+$', caminho):
+            problemas.append((id_func, nome, caminho, "Caracteres inválidos"))
+            continue
+
+        # ─── Verifica se o arquivo existe na estrutura ──────────
+        caminho_arquivo = f"paginas/{caminho.replace('.', '/')}.py"
+        if not os.path.exists(caminho_arquivo):
+            problemas.append((id_func, nome, caminho, f"Arquivo não encontrado: {caminho_arquivo}"))
 
     if problemas:
         st.error("❌ Foram encontradas funcionalidades com problemas:")
         for id_func, nome, caminho, erro in problemas:
             st.markdown(f"""
-            🔻 **ID:** `{id_func}`  
-            🏷️ **Nome:** `{nome}`  
-            📂 **Caminho:** `{caminho}`  
-            ⚠️ **Erro:** {erro}  
-            ---""")
+🔻 **ID:** `{id_func}`  
+🏷️ **Nome:** `{nome}`  
+📂 **Caminho:** `{caminho}`  
+⚠️ **Erro:** {erro}  
+---
+""")
     else:
         st.success("✅ Todos os caminhos de funcionalidades estão corretos!")
