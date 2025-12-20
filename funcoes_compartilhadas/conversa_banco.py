@@ -20,7 +20,7 @@ import time
 from functools import wraps
 from gspread.exceptions import APIError
 from funcoes_compartilhadas.cria_id import cria_id   # ⬅️ novo
-from collections.abc import Mapping
+
 
 # ===================================================
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
@@ -31,7 +31,7 @@ import json
 # 🔐 CREDENCIAIS VIA STREAMLIT SECRETS
 # ===================================================
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1et6jiVi7MhMTaXdVl7XV6yZx5-vaMz6p2eh1619Il20/edit"
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit?gid=131317013#gid=131317013"
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -74,12 +74,26 @@ def _carrega_credenciais():
 
 
 # 🔐 Autoriza acesso
-_gc = gspread.authorize(
-     Credentials.from_service_account_info(_carrega_credenciais(), scopes=_scopes)
-)
+_gc = None
+_sheet = None
 
-# 🔗 Abre a planilha
-_sheet = _gc.open_by_url(URL_PLANILHA)
+def _get_sheet():
+    global _gc, _sheet
+
+    if _sheet is not None:
+        return _sheet
+
+    creds_dict = _carrega_credenciais()
+
+    creds = Credentials.from_service_account_info(
+        creds_dict,
+        scopes=_scopes
+    )
+
+    _gc = gspread.authorize(creds)
+    _sheet = _gc.open_by_url(URL_PLANILHA)
+
+    return _sheet
 
 
 
@@ -123,7 +137,7 @@ def _scale(df: pd.DataFrame, tipos: dict, modo: str) -> pd.DataFrame:
         if col not in df.columns:
             continue
         if tipo == "numero100":
-            df[col] = df[col] if modo == "mostrar" else df[col] * 100
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
     return df
 
 
@@ -145,7 +159,7 @@ def _next_id(_):  # deprecated
 # ===================================================
 @retry_api_error
 def select(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
-    ws = _sheet.worksheet(tabela)
+    ws = _get_sheet().worksheet(tabela)
     ws = ws.get_all_records(value_render_option="UNFORMATTED_VALUE")
     df = pd.DataFrame(ws).rename(columns=str.strip)
 
@@ -161,7 +175,7 @@ def select(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
 # ===================================================
 @retry_api_error
 def insert(tabela: str, dados):
-    ws = _sheet.worksheet(tabela)
+    ws = _get_sheet().worksheet(tabela)
 
     # Padroniza entrada
     if isinstance(dados, pd.DataFrame):
@@ -196,7 +210,7 @@ def insert(tabela: str, dados):
 # ===================================================
 @retry_api_error
 def update(tabela: str, campos: list, valores: list, where: str, tipos_colunas: dict) -> int:
-    ws = _sheet.worksheet(tabela)
+    ws = _get_sheet().worksheet(tabela)
     df = pd.DataFrame(ws.get_all_records()).rename(columns=str.strip)
     if df.empty:
         return 0
@@ -230,7 +244,7 @@ def update(tabela: str, campos: list, valores: list, where: str, tipos_colunas: 
 # ===================================================
 @retry_api_error
 def delete(tabela: str, where: str, tipos_colunas: dict) -> int:
-    ws = _sheet.worksheet(tabela)
+    ws = _get_sheet().worksheet(tabela)
     df = pd.DataFrame(ws.get_all_records()).rename(columns=str.strip)
     if df.empty:
         return 0
@@ -260,7 +274,7 @@ def select_all(tipos_colunas):
     """
     import pandas as pd
 
-    planilha = _sheet  # já está aberto no seu código
+    planilha = _get_sheet()
 
     dados = []
 
@@ -295,7 +309,7 @@ import pandas as pd
 def select_financeiro():
     import pandas as pd
 
-    ws = _sheet.worksheet("painel_financeiro")
+    ws = _get_sheet().worksheet("painel_financeiro")
     dados = ws.get_all_records()
 
     df = pd.DataFrame(dados)
