@@ -106,7 +106,7 @@ def app_financeiro():
 
         mes_selecionado = st.selectbox("Escolha o mês", meses)
 
-        df_mes = df[df["Mes"] == mes_selecionado]
+        df_mes = df[df["Mes"] == mes_selecionado].copy()
         total_mes = df_mes["Valor"].sum()
 
         # ----------------------------------------------------
