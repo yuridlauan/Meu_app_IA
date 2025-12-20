@@ -10,6 +10,5 @@ scopes = [
 credenciais_json = st.secrets["gdrive_credenciais"]
 
 gc = gspread.authorize(Credentials.from_service_account_info(credenciais_json, scopes=scopes))
-planilha = gc.open_by_url("https://docs.google.com/spreadsheets/d/SEU_ID_AQUI/edit")
 abas = [ws.title for ws in planilha.worksheets()]
 st.write("✅ Conectado com sucesso às abas:", abas)

@@ -74,27 +74,20 @@ def _carrega_credenciais():
 
 
 # 🔐 Autoriza acesso
-_gc = None
-_sheet = None
+# 🔐 Autoriza acesso UMA ÚNICA VEZ
+_creds = Credentials.from_service_account_info(
+    _carrega_credenciais(),
+    scopes=_scopes
+)
+
+_gc = gspread.authorize(_creds)
+
+# 🔗 Abre a planilha UMA ÚNICA VEZ
+SPREADSHEET_ID = "1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI"
+_sheet = _gc.open_by_key(SPREADSHEET_ID)
+
 
 def _get_sheet():
-    global _gc, _sheet
-
-    if _sheet is not None:
-        return _sheet
-
-    creds_dict = _carrega_credenciais()
-
-    creds = Credentials.from_service_account_info(
-        creds_dict,
-        scopes=_scopes
-    )
-
-    _gc = gspread.authorize(creds)
-
-    SPREADSHEET_ID = "1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI"
-    _sheet = _gc.open_by_key(SPREADSHEET_ID)
-
     return _sheet
 
 

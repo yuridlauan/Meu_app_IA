@@ -35,7 +35,6 @@ _scopes = [
 _gc = gspread.authorize(
     Credentials.from_service_account_file(CAMINHO_CREDENCIAL, scopes=_scopes)
 )
-_sheet = _gc.open_by_url(URL_PLANILHA)
 
 # ===================================================
 # ❗❗ RETENTATIVAS API

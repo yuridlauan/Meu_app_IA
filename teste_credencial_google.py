@@ -24,7 +24,6 @@ try:
     gc = gspread.authorize(credenciais)
 
     # Tenta abrir a planilha
-    planilha = gc.open_by_url(URL_PLANILHA)
     dados = planilha.sheet1.get_all_records()
 
     print("✅ Conexão bem-sucedida!")

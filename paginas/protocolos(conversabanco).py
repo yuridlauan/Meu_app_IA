@@ -79,7 +79,6 @@ _gc = gspread.authorize(
 )
 
 # 🔗 Abre a planilha
-_sheet = _gc.open_by_url(URL_PLANILHA)
 
 
 
