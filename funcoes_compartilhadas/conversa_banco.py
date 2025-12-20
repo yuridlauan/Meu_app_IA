@@ -31,7 +31,6 @@ import json
 # 🔐 CREDENCIAIS VIA STREAMLIT SECRETS
 # ===================================================
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit?gid=131317013#gid=131317013"
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
