@@ -1,2 +1,11 @@
+# Credenciais locais
 credenciais/
 .streamlit/
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtualenv
+.venv/
+venv/
