@@ -1,214 +1,151 @@
 # -*- coding: utf-8 -*-
+# app.py – carrega páginas Streamlit com menu agrupado por área
+
 import streamlit as st
-import pandas as pd
-from datetime import date, timedelta
-
-from paginas.protocolos import formulario_protocolo, TIPOS_COLUNAS
-from funcoes_compartilhadas.conversa_banco import select_all, update, delete, insert
-
-# ---------------------------------------------------------
-# LISTAR PROTOCOLOS EM UMA ABA
-# ---------------------------------------------------------
-def listar_protocolos(df_filtrado, TABELA, contexto):
-    if df_filtrado.empty:
-        st.info("Nenhum protocolo nesta categoria.")
-        return
-
-    for _, row in df_filtrado.iterrows():
-        titulo = f"{row['Nº de Protocolo']} — {row['Nome Fantasia']}"
-        cidade = row.get("Cidade", "")
-        if cidade:
-            titulo = f"{cidade} | {titulo}"
-
-        with st.expander(titulo):
-            prefix = f"{contexto}_{row['ID']}"
-            dados = formulario_protocolo(row, prefix=prefix)
-
-            confirma_key = f"confirma_{contexto}_{row['ID']}"
-            if confirma_key not in st.session_state:
-                st.session_state[confirma_key] = False
-
-            with st.form(f"form_{contexto}_{row['ID']}"):
-                c1, c2 = st.columns(2)
-                atualizar = c1.form_submit_button("💾 Atualizar")
-                excluir = c2.form_submit_button("🗑️ Excluir")
-
-                if atualizar:
-                    for k in list(st.session_state.keys()):
-                        if prefix in k:
-                            del st.session_state[k]
-
-                    update(
-                        row["Cidade"],
-                        list(dados.keys()),
-                        list(dados.values()),
-                        where=f"ID,eq,{row['ID']}",
-                        tipos_colunas=TIPOS_COLUNAS
-                    )
-                    st.success("✅ Atualizado com sucesso!")
-                    st.rerun()
-
-                if excluir:
-                    st.session_state[confirma_key] = True
-
-            if st.session_state.get(confirma_key, False):
-                st.warning("Tem certeza que deseja excluir?")
-                col1, col2 = st.columns(2)
-
-                if col1.button("Confirmar", key=f"del_{contexto}_{row['ID']}"):
-                    delete(
-                        row["Cidade"],
-                        where=f"ID,eq,{row['ID']}",
-                        tipos_colunas=TIPOS_COLUNAS
-                    )
-                    st.success("Excluído!")
-                    st.rerun()
-
-                if col2.button("Cancelar", key=f"cancel_{contexto}_{row['ID']}"):
-                    st.session_state[confirma_key] = False
-
-# ---------------------------------------------------------
-# PÁGINA PRINCIPAL DO MILITAR
-# ---------------------------------------------------------
-def app(nome_militar, TABELA="Protocolos", admin=False):
-    st.title(f"👨‍🚒 Painel de {nome_militar}")
-
-    termo = st.text_input("🔍 Buscar protocolo (por nome, CPF, militar, tipo...)", placeholder="")
-
-    df = select_all(TIPOS_COLUNAS)
-
-    if not admin:
-        df = df[df["Militar Responsável"] == nome_militar]
-
-    if termo:
-        termo = termo.lower()
-        df = df[df.apply(lambda r: termo in str(r.values).lower(), axis=1)]
-
-    if df.empty:
-        st.info("Nenhum protocolo encontrado.")
-        return
-
-    df["DataProt_dt"] = pd.to_datetime(df["Data de Protocolo"], dayfirst=True, errors="coerce")
-
-    hoje = date.today()
-    semana = hoje - timedelta(days=7)
-    df_novos = df[df["DataProt_dt"] >= pd.Timestamp(semana)]
-
-    ATRIBUIDOS = ["Boleto Impresso", "Isento", "MEI"]
-    EM_ANDAMENTO = ["Boleto Pago", "Boleto Entregue"]
-    CONCLUIDOS = ["Cercon Impresso", "Empresa Encerrou"]
-    PENDENTES = ["Processo Expirado", "Empresa Não Encontrada"]
-    TODOS = ATRIBUIDOS + EM_ANDAMENTO + CONCLUIDOS + PENDENTES
-
-    df_atr = df[df["Andamento"].isin(ATRIBUIDOS)]
-    df_and = df[df["Andamento"].isin(EM_ANDAMENTO)]
-    df_conc = df[df["Andamento"].isin(CONCLUIDOS)]
-    df_pend = df[df["Andamento"].isin(PENDENTES)]
-    df_perdidos = df[~df["Andamento"].isin(TODOS)]
-
-    # 📅 AQUI VAI A NOVA ABA DE EVENTOS
-    aba_eventos, aba_novos, aba_atr, aba_and, aba_conc, aba_pend, aba_erro = st.tabs([
-        f"📅 Eventos",
-        f"🆕 Novos (7 dias) ({len(df_novos)})",
-        f"📘 Atribuídos ({len(df_atr)})",
-        f"🟡 Em andamento ({len(df_and)})",
-        f"🟢 Concluídos ({len(df_conc)})",
-        f"🔴 Pendentes ({len(df_pend)})",
-        f"⚠️ Fora de status ({len(df_perdidos)})"
-    ])
-
-    with aba_eventos:
-        st.subheader("📅 Agenda de Eventos (por mês)")
-        data_escolhida = st.date_input(
-            "Selecione uma data (usada como referência para o mês):",
-            date.today(),
-            format="DD/MM/YYYY"
-        )
+import importlib
+import sys
+import streamlit.components.v1 as components
 
 
-        with st.popover("➕ Novo Evento"):
-                with st.form("form_evento"):
-                    titulo = st.text_input("Título do Evento")
-                    descricao = st.text_area("Descrição (opcional)")
-                    enviar = st.form_submit_button("Salvar")
-                    if enviar:
-                        if not titulo.strip():
-                            st.warning("Informe um título para o evento.")
-                        else:
-                            evento = {
-                                "Data": data_escolhida.strftime("%d/%m/%Y"),
-                                "Título": titulo.strip(),
-                                "Descrição": descricao.strip(),
-                            }
-                            insert("eventos", evento)
-                            st.success("✅ Evento salvo com sucesso!")
-                            st.cache_data.clear()
-                            st.rerun()
 
-        
-        from funcoes_compartilhadas.conversa_banco import select
+# 🔄 Garante que o buffer de inserções sempre exista
+if "__buffer_inseridos__" not in st.session_state:
+    st.session_state["__buffer_inseridos__"] = []
 
-        # Lê os dados da aba "eventos"
-        df_eventos = select(
-            "eventos",
-            {
-                "ID": "id",
-                "Data": "data",
-                "Título": "texto",
-                "Descrição": "texto"
-            }
-        )
+from funcoes_compartilhadas.estilos import (
+    aplicar_estilo_padrao,
+    clear_caches,
+)
 
 
-        if not df_eventos.empty:
-            df_eventos["Data_dt"] = pd.to_datetime(df_eventos["Data"], dayfirst=True, errors="coerce")
-            mes = data_escolhida.month
-            ano = data_escolhida.year
+# ─── 1. Configuração global ──────────────────────────────────────
+st.set_page_config(page_title="Meu App com I.A.", page_icon="⚡", layout="wide")
+aplicar_estilo_padrao()
 
-            eventos_do_mes = df_eventos[
-                (df_eventos["Data_dt"].dt.month == mes) &
-                (df_eventos["Data_dt"].dt.year == ano)
-            ]
-
-            if eventos_do_mes.empty:
-                st.info("Nenhum evento neste mês.")
-            else:
-                st.write("### 📌 Eventos do mês")
-
-                for _, linha in eventos_do_mes.iterrows():
-                    col1, col2 = st.columns([5, 1])
-
-                    with col1:
-                        st.markdown(f"📅 **{linha['Data']} — {linha['Título']}**")
-                        if linha["Descrição"]:
-                            st.caption(linha["Descrição"])
-
-                    with col2:
-                        if st.button("🗑️", key=f"del_evt_{linha['ID']}"):
-                            delete(
-                                "eventos",
-                                where=f"ID,eq,{linha['ID']}",
-                                tipos_colunas={
-                                    "ID": "id",
-                                    "Data": "data",
-                                    "Título": "texto",
-                                    "Descrição": "texto"
-                                }
-                            )
-                            st.success("✅ Evento excluído!")
-                            st.rerun()
+# deixa o botão "radio" alinhado com o menu
+st.markdown("""
+    <style>
+    [data-testid="stSidebar"] .stRadio > div {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    [data-testid="stSidebar"] label {
+        align-items: center;
+        display: flex;
+        gap: 0.5rem;
+        word-break: break-word;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 
-    # TABS EXISTENTES
-    with aba_novos:
-        listar_protocolos(df_novos, TABELA, "novos")
-    with aba_atr:
-        listar_protocolos(df_atr, TABELA, "atribuido")
-    with aba_and:
-        listar_protocolos(df_and, TABELA, "andamento")
-    with aba_conc:
-        listar_protocolos(df_conc, TABELA, "concluido")
-    with aba_pend:
-        listar_protocolos(df_pend, TABELA, "pendente")
-    with aba_erro:
-        listar_protocolos(df_perdidos, TABELA, "erro")
+components.html(
+    """
+    <script>
+      const root = parent.document.documentElement;
+      root.setAttribute('lang', 'pt-BR');
+      root.setAttribute('translate', 'no');
+      const meta = parent.document.createElement('meta');
+      meta.name    = 'google';
+      meta.content = 'notranslate';
+      parent.document.head.appendChild(meta);
+    </script>
+    """,
+    height=0,
+)
+
+
+# ─── 2. Funções utilitárias ──────────────────────────────────────
+
+def set_tab_title(title: str, icon_url: str | None = None) -> None:
+    """Altera o título da aba e opcionalmente o favicon."""
+    js = f"""<script>document.title = "{title}";"""
+    if icon_url:
+        js += f"""
+        const link = document.querySelector('link[rel*="icon"]') || document.createElement('link');
+        link.type = 'image/png';
+        link.rel  = 'shortcut icon';
+        link.href = '{icon_url}';
+        document.head.appendChild(link);"""
+    js += "</script>"
+    st.markdown(js, unsafe_allow_html=True)
+
+
+def reload_module(path: str):
+    """Importa ou recarrega um módulo (evita cache de código)."""
+    if path in sys.modules:
+        return importlib.reload(sys.modules[path])
+    return importlib.import_module(path)
+
+
+def mudar_pagina(alvo: str) -> None:
+    """Se a opção no menu mudou, limpa caches e força rerun."""
+    if st.session_state.get("page") != alvo:
+        st.session_state["page"] = alvo
+        clear_caches()
+        st.rerun()
+
+
+# ─── 3. Definição do menu ────────────────────────────────────────
+
+PAGINAS = {
+    "Serviço": {
+        "porangatu": "Porangatu",
+        "santa_tereza": "Santa Tereza",
+        "estrela_do_norte": "Estrela do Norte",
+        "formoso": "Formoso",
+        "trombas": "Trombas",
+        "novo_planalto": "Novo Planalto",
+        "montividiu": "Montividiu",
+        "mutunopolis": "Mutunópolis",
+    },
+    "Militares": {
+        "militares.dlauan": "Asp Of D'Lauan (Admin)",
+        "militares.tamilla": "2° Sgt Tamilla",
+        "militares.ribeiro": "2° Sgt Ribeiro",
+        "militares.ederson": "2° Sgt Éderson"
+    },
+    "Administrador": {
+        "cadastro_usuarios": "Cadastro de Usuários",
+        "cadastro_menus": "Cadastro de Menus",
+        "cadastro_funcionalidades": "Cadastro de Funcionalidades",
+        "cadastro_permissoes": "Cadastro de Permissões",
+        "painel_financeiro": "Painel Financeiro",
+        "atualizar_ids": "Atualizar IDs"
+    }
+}
+
+
+# ─── 4. Construção do menu lateral ───────────────────────────────
+
+st.sidebar.image("imagens/logo.png", use_container_width=True)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+
+# 🔸 Menu de Área (Selectbox)
+area = st.sidebar.selectbox("Área:", list(PAGINAS.keys()))
+
+# 🔸 Menu de Funcionalidade (Radio)
+funcionalidades = PAGINAS[area]
+rotulo = st.sidebar.radio(
+    "Funcionalidade:",
+    ["Selecionar..."] + list(funcionalidades.values()),
+    index=0
+)
+
+# 🔍 Se não selecionou, para a execução
+if rotulo == "Selecionar...":
+    st.stop()
+
+# 🔍 Localiza o nome do arquivo com base na escolha
+arquivo = next(k for k, v in funcionalidades.items() if v == rotulo)
+
+
+# ─── 5. Título da aba do navegador ───────────────────────────────
+set_tab_title(f"{rotulo} — Meu App")
+
+
+# ─── 6. Carrega e executa a página selecionada ───────────────────
+mod = reload_module(f"paginas.{arquivo}")
+mod.app()  
+
+

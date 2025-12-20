@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-# app.py – carrega páginas Streamlit com menu agrupado por área
+# app.py – carrega páginas Streamlit com login e menus por área
 
 import streamlit as st
 import importlib
 import sys
 import streamlit.components.v1 as components
-
-
 
 # 🔄 Garante que o buffer de inserções sempre exista
 if "__buffer_inseridos__" not in st.session_state:
@@ -17,12 +15,17 @@ from funcoes_compartilhadas.estilos import (
     clear_caches,
 )
 
+from funcoes_compartilhadas.controle_acesso import (
+    login,
+    usuario_logado,
+    logoutX,
+)
 
 # ─── 1. Configuração global ──────────────────────────────────────
 st.set_page_config(page_title="Meu App com I.A.", page_icon="⚡", layout="wide")
 aplicar_estilo_padrao()
 
-# deixa o botão "radio" alinhado com o menu
+# Alinha os botões do menu lateral
 st.markdown("""
     <style>
     [data-testid="stSidebar"] .stRadio > div {
@@ -38,9 +41,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-
-components.html(
-    """
+# Linguagem da interface
+components.html("""
     <script>
       const root = parent.document.documentElement;
       root.setAttribute('lang', 'pt-BR');
@@ -50,15 +52,27 @@ components.html(
       meta.content = 'notranslate';
       parent.document.head.appendChild(meta);
     </script>
-    """,
-    height=0,
-)
-
+""", height=0)
 
 # ─── 2. Funções utilitárias ──────────────────────────────────────
 
+def _query_params_dict() -> dict:
+    """Compatibilidade com query string."""
+    qp = getattr(st, "query_params", None)
+    if qp is not None:
+        try:
+            return qp.to_dict()
+        except Exception:
+            try:
+                return dict(qp)
+            except Exception:
+                return {}
+    try:
+        return st.experimental_get_query_params()
+    except Exception:
+        return {}
+
 def set_tab_title(title: str, icon_url: str | None = None) -> None:
-    """Altera o título da aba e opcionalmente o favicon."""
     js = f"""<script>document.title = "{title}";"""
     if icon_url:
         js += f"""
@@ -70,23 +84,25 @@ def set_tab_title(title: str, icon_url: str | None = None) -> None:
     js += "</script>"
     st.markdown(js, unsafe_allow_html=True)
 
-
 def reload_module(path: str):
-    """Importa ou recarrega um módulo (evita cache de código)."""
     if path in sys.modules:
         return importlib.reload(sys.modules[path])
     return importlib.import_module(path)
 
-
 def mudar_pagina(alvo: str) -> None:
-    """Se a opção no menu mudou, limpa caches e força rerun."""
     if st.session_state.get("page") != alvo:
         st.session_state["page"] = alvo
         clear_caches()
         st.rerun()
 
+# ─── 2.1 Recuperação de senha ────────────────────────────────────
+query_params = _query_params_dict()
+if query_params.get("recuperar") == "1":
+    mod = reload_module("paginas.redefinir_senha")
+    mod.app()
+    st.stop()
 
-# ─── 3. Definição do menu ────────────────────────────────────────
+# ─── 3. Definição dos menus ──────────────────────────────────────
 
 PAGINAS = {
     "Serviço": {
@@ -115,37 +131,28 @@ PAGINAS = {
     }
 }
 
-
-# ─── 4. Construção do menu lateral ───────────────────────────────
-
+# ─── 4. Sidebar ──────────────────────────────────────────────────
 st.sidebar.image("imagens/logo.png", use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
-# 🔸 Menu de Área (Selectbox)
 area = st.sidebar.selectbox("Área:", list(PAGINAS.keys()))
-
-# 🔸 Menu de Funcionalidade (Radio)
 funcionalidades = PAGINAS[area]
-rotulo = st.sidebar.radio(
-    "Funcionalidade:",
-    ["Selecionar..."] + list(funcionalidades.values()),
-    index=0
-)
+rotulo = st.sidebar.radio("Funcionalidade:", ["Selecionar..."] + list(funcionalidades.values()), index=0)
 
-# 🔍 Se não selecionou, para a execução
+# 🔒 Login obrigatório
+if not usuario_logado():
+    login()
+    st.stop()
+
 if rotulo == "Selecionar...":
     st.stop()
 
-# 🔍 Localiza o nome do arquivo com base na escolha
+# ─── 5. Página selecionada ───────────────────────────────────────
 arquivo = next(k for k, v in funcionalidades.items() if v == rotulo)
-
-
-# ─── 5. Título da aba do navegador ───────────────────────────────
 set_tab_title(f"{rotulo} — Meu App")
 
-
-# ─── 6. Carrega e executa a página selecionada ───────────────────
 mod = reload_module(f"paginas.{arquivo}")
-mod.app()  
+mod.app()
 
-
+# ─── 6. Logout ───────────────────────────────────────────────────
+logoutX()
