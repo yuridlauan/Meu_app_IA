@@ -91,9 +91,12 @@ def _get_sheet():
     )
 
     _gc = gspread.authorize(creds)
-    _sheet = _gc.open_by_url(URL_PLANILHA)
+
+    SPREADSHEET_ID = "1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI"
+    _sheet = _gc.open_by_key(SPREADSHEET_ID)
 
     return _sheet
+
 
 
 
