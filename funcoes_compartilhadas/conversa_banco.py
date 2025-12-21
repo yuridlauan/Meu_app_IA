@@ -31,7 +31,7 @@ _gc = gspread.authorize(
 )
 
 # Abra a planilha pelo link (coloque direto no código, ou puxe de outro segredo)
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1VxlCps0qSck915fqav1fUGDTtXI82CFI8MZaBEJ8vtI/edit"
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit"
 _sheet = _gc.open_by_url(URL_PLANILHA)
 
 # ===================================================
