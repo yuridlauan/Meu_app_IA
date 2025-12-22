@@ -2,7 +2,6 @@
 # app.py – carrega páginas Streamlit com menu agrupado por área
 
 import streamlit as st
-st.write("🔑 url_planilha:", st.secrets.get("url_planilha", "❌ NÃO ENCONTRADA"))
 import importlib
 import sys
 import streamlit.components.v1 as components
