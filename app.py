@@ -85,6 +85,7 @@ if not usuario_logado():
     st.stop()
 
 from funcoes_compartilhadas import conversa_banco
+from funcoes_compartilhadas.controle_acesso import menus_liberados
 
 # ─── MENU LATERAL ─────────────────────────────────────────────────────────────
 
