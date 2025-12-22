@@ -1,17 +1,17 @@
+# formatar_chave.py
+
 import json
 
-# Caminho do arquivo de credenciais JSON original
-caminho_json = "credenciais/gdrive_credenciais.json"
+# Caminho do arquivo dentro da pasta 'credenciais'
+input_path = "credenciais/gdrive_credenciais.json"
 
-# Nome da seção no secrets (ex: [gdrive_credenciais])
-nome_secrets = "gdrive_credenciais"
+with open(input_path, "r") as f:
+    data = json.load(f)
 
-with open(caminho_json, "r") as f:
-    dados = json.load(f)
+# Substitui quebras de linha da private_key por '\\n'
+data["private_key"] = data["private_key"].replace("\n", "\\n")
 
-print(f"[{nome_secrets}]")
-for chave, valor in dados.items():
-    # Aspas duplas para strings
-    if isinstance(valor, str):
-        valor = f'"{valor}"'
-    print(f"{chave} = {valor}")
+# Imprime em formato compatível com Streamlit secrets.toml
+print("[gdrive_credenciais]")
+for k, v in data.items():
+    print(f'{k} = "{v}"')
