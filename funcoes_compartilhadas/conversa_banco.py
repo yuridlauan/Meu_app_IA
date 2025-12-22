@@ -16,20 +16,19 @@ from funcoes_compartilhadas.cria_id import cria_id
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
 # ===================================================
 
-# Lê as credenciais direto do secrets.toml
-credenciais_info = st.secrets["gdrive_credenciais"]
+CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
 
-# Define escopos de acesso
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
 
-# Autoriza com base nas credenciais do secrets
 _gc = gspread.authorize(
-    Credentials.from_service_account_info(credenciais_info, scopes=_scopes)
+    Credentials.from_service_account_file(
+        CAMINHO_CREDENCIAL,
+        scopes=_scopes
+    )
 )
-
 # Abra a planilha pelo link (coloque direto no código, ou puxe de outro segredo)
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit"
 _sheet = _gc.open_by_url(URL_PLANILHA)

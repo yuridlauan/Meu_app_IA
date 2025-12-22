@@ -7,7 +7,6 @@ import sys
 import streamlit.components.v1 as components
 from funcoes_compartilhadas.estilos import aplicar_estilo_padrao, clear_caches
 from funcoes_compartilhadas.controle_acesso import login, usuario_logado, menus_liberados, logoutX
-from funcoes_compartilhadas import conversa_banco
 
 # ─── Redireciona para redefinir senha se necessário ───────────────────────────
 from urllib.parse import parse_qs
@@ -84,6 +83,8 @@ def mudar_pagina(alvo: str):
 if not usuario_logado():
     login()
     st.stop()
+
+from funcoes_compartilhadas import conversa_banco
 
 # ─── MENU LATERAL ─────────────────────────────────────────────────────────────
 

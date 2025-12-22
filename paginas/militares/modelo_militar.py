@@ -80,7 +80,12 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
     df = select_protocolos(TIPOS_COLUNAS)
 
     if not admin:
-        df = df[df["Militar Responsável"] == nome_militar]
+        if "Militar Responsável" not in df.columns or df["Militar Responsável"].isna().all():
+            st.warning(f"⚠️ Nenhum protocolo atribuído para: {nome_militar}")
+            st.stop()
+        else:
+            df = df[df["Militar Responsável"] == nome_militar]
+
 
     if termo:
         termo = termo.lower()
