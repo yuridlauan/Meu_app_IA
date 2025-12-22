@@ -50,7 +50,6 @@ def carregar_dados(TABELA):
         try:
             if pd.isna(valor) or str(valor).strip() == "":
                 return ""
-            # formato numero tipo 45617 (excel serial)
             if str(valor).isdigit():
                 data = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(valor), unit="D")
                 return data.strftime("%d/%m/%Y")
@@ -62,14 +61,22 @@ def carregar_dados(TABELA):
         except Exception:
             return str(valor)
 
-    df = select(TABELA, TIPOS_COLUNAS)
-    df = pd.DataFrame(df)
+    # Puxa os dados do banco
+    dados = select(TABELA, TIPOS_COLUNAS)
+    df = pd.DataFrame(dados)
 
+    # Garante que todas as colunas da estrutura estão no df, mesmo vazio
+    for col in TIPOS_COLUNAS:
+        if col not in df.columns:
+            df[col] = ""
+
+    # Corrige as datas
     for coluna in ["Data de Protocolo", "Validade do Boleto", "Validade do Cercon"]:
         if coluna in df.columns:
             df[coluna] = df[coluna].apply(corrige_data)
 
     return df
+
 
 
 # -----------------------------------------------------------
