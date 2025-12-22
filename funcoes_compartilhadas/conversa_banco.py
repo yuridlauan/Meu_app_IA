@@ -16,7 +16,11 @@ from funcoes_compartilhadas.cria_id import cria_id
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA
 # ===================================================
 
-CAMINHO_CREDENCIAL = "credenciais/gdrive_credenciais.json"
+# ===================================================
+# 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA (STREAMLIT CLOUD)
+# ===================================================
+
+credenciais_info = st.secrets["gdrive_credenciais"]
 
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -24,11 +28,12 @@ _scopes = [
 ]
 
 _gc = gspread.authorize(
-    Credentials.from_service_account_file(
-        CAMINHO_CREDENCIAL,
+    Credentials.from_service_account_info(
+        credenciais_info,
         scopes=_scopes
     )
 )
+
 # Abra a planilha pelo link (coloque direto no código, ou puxe de outro segredo)
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit"
 _sheet = _gc.open_by_url(URL_PLANILHA)
