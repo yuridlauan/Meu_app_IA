@@ -35,8 +35,8 @@ _gc = gspread.authorize(
 )
 
 # Abra a planilha pelo link (coloque direto no código, ou puxe de outro segredo)
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1liX-JNtRZpXj9lUB3YYYjUG5sG_IkpMitqSvlrcUDyI/edit"
-_sheet = _gc.open_by_url(URL_PLANILHA)
+URL_PLANILHA = st.secrets["url_planilha"]
+
 
 # ===================================================
 # ❗❗ RETENTATIVAS API
@@ -50,6 +50,7 @@ def retry_api_error(func):
                 try:
                     return func(*args, **kwargs)
                 except APIError as e:
+                    print(f"[retry_api_error] {e}")
                     if "Quota exceeded" in str(e):
                         time.sleep(5)
                     else:
