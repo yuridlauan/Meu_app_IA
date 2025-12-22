@@ -20,7 +20,7 @@ from funcoes_compartilhadas.cria_id import cria_id
 # 🔐 CREDENCIAIS E CONEXÃO COM PLANILHA (STREAMLIT CLOUD)
 # ===================================================
 
-credenciais_info = st.secrets["gdrive_credenciais"]
+credenciais_info = st.secrets[gdrive_credenciais]
 
 _scopes = [
     "https://www.googleapis.com/auth/spreadsheets",
