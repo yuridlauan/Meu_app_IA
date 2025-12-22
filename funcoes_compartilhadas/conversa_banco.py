@@ -76,11 +76,39 @@ def _map_cols(df: pd.DataFrame) -> dict:
 # 🟩 SELECT
 # ===================================================
 @retry_api_error
-def select(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
+def select_protocolos(tipos_colunas: dict) -> pd.DataFrame:
+    """Lê somente abas de cidades (protocolos) e concatena em um único DataFrame"""
+    # Lista de abas válidas (cidades)
+    abas_validas = [
+        "Porangatu", "Santa Tereza", "Estrela do Norte", "Formoso",
+        "Trombas", "Novo Planalto", "Montividiu", "Mutunópolis"
+    ]
+
+    df_final = pd.DataFrame()
+
+    for nome in abas_validas:
+        try:
+            aba = _sheet.worksheet(nome)
+            registros = aba.get_all_records(value_render_option="UNFORMATTED_VALUE")
+            if not registros:
+                continue
+
+            df = pd.DataFrame(registros).rename(columns=str.strip)
+            df["Cidade"] = nome  # ✅ adiciona cidade, útil no código
+            df_final = pd.concat([df_final, df], ignore_index=True)
+        except Exception:
+            continue
+
+    return _scale(df_final, tipos_colunas, "mostrar")
+@retry_api_error
+
+def select_aba(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
+    """Lê uma única aba da planilha"""
     ws = _sheet.worksheet(tabela)
-    ws = ws.get_all_records(value_render_option="UNFORMATTED_VALUE")
-    df = pd.DataFrame(ws).rename(columns=str.strip)
+    registros = ws.get_all_records(value_render_option="UNFORMATTED_VALUE")
+    df = pd.DataFrame(registros).rename(columns=str.strip)
     return _scale(df, tipos_colunas, "mostrar")
+
 
 # ===================================================
 # 🟦 INSERT
@@ -156,3 +184,14 @@ def delete(tabela: str, where: str, tipos_colunas: dict) -> int:
     for i in sorted(linhas, reverse=True):
         ws.delete_rows(i + 2)
     return len(linhas)
+# ===================================================
+# 🔁 COMPATIBILIDADE COM CÓDIGO ANTIGO (LOGIN, USUÁRIOS, ETC)
+# ===================================================
+
+@retry_api_error
+def select(tabela: str, tipos_colunas: dict) -> pd.DataFrame:
+    """
+    Função genérica para leitura de abas únicas:
+    usada por login, usuários, eventos, permissões, etc.
+    """
+    return select_aba(tabela, tipos_colunas)

@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import date, timedelta
 
 from paginas.protocolos import formulario_protocolo, TIPOS_COLUNAS
-from funcoes_compartilhadas.conversa_banco import select_all, update, delete, insert
+from funcoes_compartilhadas.conversa_banco import select_protocolos, select, update, delete, insert
 
 # ---------------------------------------------------------
 # LISTAR PROTOCOLOS EM UMA ABA
@@ -77,7 +77,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
     termo = st.text_input("🔍 Buscar protocolo (por nome, CPF, militar, tipo...)", placeholder="")
 
-    df = select_all(TIPOS_COLUNAS)
+    df = select_protocolos(TIPOS_COLUNAS)
 
     if not admin:
         df = df[df["Militar Responsável"] == nome_militar]
@@ -173,7 +173,6 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
                             st.rerun()
 
         
-        from funcoes_compartilhadas.conversa_banco import select
 
         # Lê os dados da aba "eventos"
         df_eventos = select(
