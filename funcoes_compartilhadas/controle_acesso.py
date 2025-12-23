@@ -98,7 +98,14 @@ def login():
             </style>
         """, unsafe_allow_html=True)
 
+        
         if st.button("Entrar", key="login_botao"):
+            try:
+                df = conversa_banco.select(TABELA_USUARIOS, TIPOS_USUARIOS)
+            except Exception as e:
+                st.error(f"❌ Erro ao acessar banco: {e}")
+                return
+
             df = conversa_banco.select(TABELA_USUARIOS, TIPOS_USUARIOS)
             df = df[df["Email"].str.lower() == email.lower()]
 
