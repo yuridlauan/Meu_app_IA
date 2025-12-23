@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
-# app_sem_login.py — agora COM login reaproveitando o controle_acesso
+# app_sem_login.py — com login, botão sair e layout como no app.py
 
 import streamlit as st
 
-# 🔐 LOGIN OBRIGATÓRIO — TEM QUE SER A PRIMEIRA COISA
-from funcoes_compartilhadas.controle_acesso import login, usuario_logado
+# 🔐 LOGIN PRIMEIRO — obrigatório antes de carregar qualquer coisa
+from funcoes_compartilhadas.controle_acesso import login, usuario_logado, logoutX
 
 if not usuario_logado():
+    # Ocupa a tela toda, sem menu
+    st.set_page_config(layout="wide")
     login()
-    st.stop()   # ⛔ bloqueia tudo daqui pra baixo
+    st.stop()
 
 
 # ───────────────────────────────────────────────────────────────
@@ -19,20 +21,17 @@ import importlib
 import sys
 import streamlit.components.v1 as components
 
-# 🔄 Garante buffer
+from funcoes_compartilhadas.estilos import aplicar_estilo_padrao, clear_caches
+
+# 🔄 Buffer
 if "__buffer_inseridos__" not in st.session_state:
     st.session_state["__buffer_inseridos__"] = []
 
-from funcoes_compartilhadas.estilos import (
-    aplicar_estilo_padrao,
-    clear_caches,
-)
-
-# ─── Configuração global ────────────────────────────────────────
+# 🧱 Estilo e layout
 st.set_page_config(page_title="Meu App com I.A.", page_icon="⚡", layout="wide")
 aplicar_estilo_padrao()
 
-# Ajuste visual do menu
+# 🧬 Estilo do menu lateral
 st.markdown("""
     <style>
     [data-testid="stSidebar"] .stRadio > div {
@@ -48,8 +47,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-components.html(
-    """
+components.html("""
     <script>
       const root = parent.document.documentElement;
       root.setAttribute('lang', 'pt-BR');
@@ -59,24 +57,10 @@ components.html(
       meta.content = 'notranslate';
       parent.document.head.appendChild(meta);
     </script>
-    """,
-    height=0,
-)
+""", height=0)
+
 
 # ─── Utilitários ────────────────────────────────────────────────
-def set_tab_title(title: str, icon_url: str | None = None) -> None:
-    js = f"""<script>document.title = "{title}";"""
-    if icon_url:
-        js += f"""
-        const link = document.querySelector('link[rel*="icon"]') || document.createElement('link');
-        link.type = 'image/png';
-        link.rel  = 'shortcut icon';
-        link.href = '{icon_url}';
-        document.head.appendChild(link);"""
-    js += "</script>"
-    st.markdown(js, unsafe_allow_html=True)
-
-
 def reload_module(path: str):
     if path in sys.modules:
         return importlib.reload(sys.modules[path])
@@ -90,7 +74,20 @@ def mudar_pagina(alvo: str) -> None:
         st.rerun()
 
 
-# ─── Definição das páginas ──────────────────────────────────────
+def set_tab_title(title: str, icon_url: str | None = None) -> None:
+    js = f"""<script>document.title = "{title}";"""
+    if icon_url:
+        js += f"""
+        const link = document.querySelector('link[rel*="icon"]') || document.createElement('link');
+        link.type = 'image/png';
+        link.rel  = 'shortcut icon';
+        link.href = '{icon_url}';
+        document.head.appendChild(link);"""
+    js += "</script>"
+    st.markdown(js, unsafe_allow_html=True)
+
+
+# ─── MENU FIXO ───────────────────────────────────────────────────
 PAGINAS = {
     "Serviço": {
         "porangatu": "Porangatu",
@@ -118,7 +115,7 @@ PAGINAS = {
     }
 }
 
-# ─── Sidebar ────────────────────────────────────────────────────
+# ─── MENU LATERAL ────────────────────────────────────────────────
 st.sidebar.image("imagens/logo.png", use_container_width=True)
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
 
@@ -131,13 +128,16 @@ rotulo = st.sidebar.radio(
     index=0
 )
 
+logoutX()  # 🔒 Botão Sair
+
 if rotulo == "Selecionar...":
     st.stop()
 
 arquivo = next(k for k, v in funcionalidades.items() if v == rotulo)
 
-# ─── Execução ───────────────────────────────────────────────────
+# 🧠 Define título da aba
 set_tab_title(f"{rotulo} — Meu App")
 
+# 🚀 Executa página
 mod = reload_module(f"paginas.{arquivo}")
 mod.app()
