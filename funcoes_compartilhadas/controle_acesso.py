@@ -14,7 +14,6 @@ Controle de Acesso Genérico (Streamlit Cloud Friendly)
 import streamlit as st
 import pandas as pd
 import hashlib
-from funcoes_compartilhadas import conversa_banco
 from PIL import Image
 import base64
 from io import BytesIO
@@ -57,6 +56,7 @@ def hash_senha(senha: str) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 # 🚪 LOGIN
 def login():
+    from funcoes_compartilhadas import conversa_banco
     col1, col2, col3 = st.columns([0.35, 0.3, 0.35])
 
     with col2:
