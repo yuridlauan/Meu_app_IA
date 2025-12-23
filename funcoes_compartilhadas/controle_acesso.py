@@ -14,6 +14,7 @@ Controle de Acesso Genérico (Streamlit Cloud Friendly)
 import streamlit as st
 import pandas as pd
 import hashlib
+from funcoes_compartilhadas import conversa_banco
 from PIL import Image
 import base64
 from io import BytesIO
@@ -57,6 +58,7 @@ def hash_senha(senha: str) -> str:
 # 🚪 LOGIN
 def login():
     from funcoes_compartilhadas import conversa_banco
+
     col1, col2, col3 = st.columns([0.35, 0.3, 0.35])
 
     with col2:
@@ -182,7 +184,7 @@ def menus_liberados():
     usuario_id = str(st.session_state["usuario_logado"]["ID"])
 
     # 🔥 Admin vê tudo
-    if usuario_id in ["1", "ADMIN", "20251207_121831_1"]:
+    if usuario_id in ["1", "ADMIN", "20251220_152855_192168116_1"]:
         return None
 
     df = conversa_banco.select(TABELA_PERMISSOES, {
