@@ -216,6 +216,12 @@ def app(TABELA):
     # ----------------- CADASTRAR NOVO PROTOCOLO -----------------
     with st.expander("➕ Cadastrar Novo Protocolo", expanded=False):
         dados_novos = formulario_protocolo(prefix="novo")
+        # --- ALERTA SE JÁ EXISTE O NÚMERO DE PROTOCOLO ---
+        if dados_novos["Nº de Protocolo"]:
+            lista_protocolos = df_all["Nº de Protocolo"].astype(str).str.strip().tolist()
+            if dados_novos["Nº de Protocolo"].strip() in lista_protocolos:
+                st.warning("⚠️ Protocolo Duplicado!")
+
 
         if st.button("💾 Salvar Novo Protocolo", key="salvar_novo"):
             try:
