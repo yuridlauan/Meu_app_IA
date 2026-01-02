@@ -373,9 +373,10 @@ def app(TABELA):
         if df.empty:
             st.info("Nenhum protocolo encontrado.")
         else:
-            for _, row in df.iterrows():
+            for idx, row in df.iterrows():
                 with st.expander(f"🧾 {row['Nº de Protocolo']} — {row['Nome Fantasia']}"):
-                    dados = formulario_protocolo(row, prefix=row["ID"])
+                    dados = formulario_protocolo(row,prefix=f"princ_{row['ID']}_{idx}")
+
 
                     # Controle da confirmação de exclusão
                     confirma_key = f"confirma_exclusao_{row['ID']}"
@@ -441,7 +442,7 @@ def app(TABELA):
         if df_proximos.empty:
             st.info("Nenhum Cercon próximo ao vencimento nos próximos 30 dias.")
         else:
-            for _, row in df_proximos.iterrows():
+            for idx, row in df_proximos.iterrows():
 
                 # Verifica se o campo "Notificação" está como "Notificado"
                 notificado = str(row.get("Notificação", "")).strip().lower() == "notificado"
@@ -451,7 +452,7 @@ def app(TABELA):
                 with st.expander(f"🟨 {row['Nº de Protocolo']} — {row['Nome Fantasia']}{rotulo_notif}", expanded=False):
 
 
-                    dados = formulario_protocolo(row, prefix=f"prox_{row['ID']}")
+                    dados = formulario_protocolo(row, prefix=f"prox_{row['ID']}_{idx}")
 
                     # Controle da confirmação de exclusão
                     confirma_key = f"confirma_exclusao_prox_{row['ID']}"
@@ -509,7 +510,7 @@ def app(TABELA):
         if df_vencidos.empty:
             st.success("Nenhum Cercon vencido nos últimos 365 dias! 🎉")
         else:
-            for _, row in df_vencidos.iterrows():
+            for idx, row in df_vencidos.iterrows():
 
                 dias_vencidos = (hoje - row["Validade_dt"].date()).days if pd.notna(row["Validade_dt"]) else "N/A"
 
@@ -521,7 +522,7 @@ def app(TABELA):
                 # Monta o título do expander com o status
                 with st.expander(f"🟨 {row['Nº de Protocolo']} — {row['Nome Fantasia']}{rotulo_notif}", expanded=False):
 
-                    dados = formulario_protocolo(row, prefix=f"venc_{row['ID']}")
+                    dados = formulario_protocolo(row, prefix=f"venc_{row['ID']}_{idx}")
 
                     confirma_key = f"confirma_exclusao_venc_{row['ID']}"
                     if confirma_key not in st.session_state:
@@ -587,7 +588,7 @@ def app(TABELA):
         if df_expirados.empty:
             st.info("Nenhum processo expirado.")
         else:
-            for _, row in df_expirados.iterrows():
+            for idx, row in df_expirados.iterrows():
 
                 # 🔹 Definição do motivo
                 if (
@@ -602,7 +603,7 @@ def app(TABELA):
                     f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})",
                     expanded=False
                 ):
-                    dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}")
+                    dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}_{idx}")
 
                     confirma_key = f"confirma_exclusao_exp_{row['ID']}"
                     if confirma_key not in st.session_state:
@@ -665,12 +666,12 @@ def app(TABELA):
             if df_novos.empty:
                 st.info("Nenhum protocolo foi cadastrado hoje.")
             else:
-                for _, row in df_novos.iterrows():
+                for idx, row in df_novos.iterrows():
 
                     with st.expander(f"🆕 {row['Nº de Protocolo']} — {row['Nome Fantasia']}", expanded=False):
 
                         # formulário
-                        dados = formulario_protocolo(row, prefix=f"novo_{row['ID']}")
+                        dados = formulario_protocolo(row, prefix=f"novo_{row['ID']}_{idx}")
 
                         # chave de confirmação
                         confirma_key = f"confirma_exclusao_novos_{row['ID']}"
@@ -727,9 +728,9 @@ def app(TABELA):
         if df_semcercon.empty:
             st.info("Nenhum protocolo sem Cercon.")
         else:
-            for _, row in df_semcercon.iterrows():
+            for idx, row in df_semcercon.iterrows():
                 with st.expander(f"🧾 {row['Nº de Protocolo']} — {row['Nome Fantasia']}"):
-                    dados = formulario_protocolo(row, prefix=f"{row['ID']}_semcercon")
+                    dados = formulario_protocolo(row, prefix=f"sem_{row['ID']}_{idx}")
 
 
                     with st.form(key=f"form_semcercon_{row['ID']}"):
