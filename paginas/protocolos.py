@@ -384,7 +384,7 @@ def app(TABELA):
                         st.session_state[confirma_key] = False
 
                     # Formulário de ações (atualizar / excluir)
-                    with st.form(key=f"form_acoes_{row['ID']}"):
+                    with st.form(key=f"form_acoes_princ_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
                         excluir = col2.form_submit_button("🗑️ Excluir")
@@ -460,7 +460,7 @@ def app(TABELA):
                         st.session_state[confirma_key] = False
 
                     # Formulário de ações
-                    with st.form(key=f"form_prox_{row['ID']}"):
+                    with st.form(key=f"form_prox_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
                         excluir = col2.form_submit_button("🗑️ Excluir")
@@ -528,7 +528,7 @@ def app(TABELA):
                     if confirma_key not in st.session_state:
                         st.session_state[confirma_key] = False
 
-                    with st.form(key=f"form_venc_{row['ID']}"):
+                    with st.form(key=f"form_venc_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
                         excluir = col2.form_submit_button("🗑️ Excluir")
@@ -609,7 +609,7 @@ def app(TABELA):
                     if confirma_key not in st.session_state:
                         st.session_state[confirma_key] = False
 
-                    with st.form(key=f"form_exp_{row['ID']}"):
+                    with st.form(key=f"form_exp_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
                         excluir = col2.form_submit_button("🗑️ Excluir")
@@ -679,7 +679,7 @@ def app(TABELA):
                             st.session_state[confirma_key] = False
 
                         # Formulário de ações
-                        with st.form(key=f"form_novos_{row['ID']}"):
+                        with st.form(key=f"form_novos_{row['ID']}_{idx}"):
                             col1, col2 = st.columns(2)
                             atualizar = col1.form_submit_button("💾 Atualizar")
                             excluir = col2.form_submit_button("🗑️ Excluir")
@@ -733,7 +733,7 @@ def app(TABELA):
                     dados = formulario_protocolo(row, prefix=f"sem_{row['ID']}_{idx}")
 
 
-                    with st.form(key=f"form_semcercon_{row['ID']}"):
+                    with st.form(key=f"form_semcercon_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
                         excluir = col2.form_submit_button("🗑️ Excluir")
