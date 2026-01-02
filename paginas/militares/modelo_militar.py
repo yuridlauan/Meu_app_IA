@@ -6,6 +6,23 @@ from datetime import date, timedelta
 from paginas.protocolos import formulario_protocolo, TIPOS_COLUNAS
 from funcoes_compartilhadas.conversa_banco import select_protocolos, select, update, delete, insert
 
+import pandas as pd
+
+def corrige_data(valor):
+    try:
+        if pd.isna(valor) or str(valor).strip() == "":
+            return ""
+        if str(valor).isdigit():
+            data = pd.to_datetime("1899-12-30") + pd.to_timedelta(int(valor), unit="D")
+            return data.strftime("%d/%m/%Y")
+        else:
+            data = pd.to_datetime(str(valor), dayfirst=True, errors="coerce")
+            if pd.notna(data):
+                return data.strftime("%d/%m/%Y")
+            return str(valor)
+    except Exception:
+        return str(valor)
+
 # ---------------------------------------------------------
 # LISTAR PROTOCOLOS EM UMA ABA
 # ---------------------------------------------------------
