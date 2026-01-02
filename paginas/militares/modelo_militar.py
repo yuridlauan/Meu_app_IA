@@ -79,6 +79,12 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
     df = select_protocolos(TIPOS_COLUNAS)
 
+    # Corrige datas vindas como número (Sheets)
+    for col in ["Data de Protocolo", "Validade do Boleto", "Validade do Cercon"]:
+        if col in df.columns:
+            df[col] = df[col].apply(corrige_data)
+
+
     if not admin:
         if "Militar Responsável" not in df.columns or df["Militar Responsável"].isna().all():
             st.warning(f"⚠️ Nenhum protocolo atribuído para: {nome_militar}")
