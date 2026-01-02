@@ -14,7 +14,7 @@ def criar_id():
 
 
 # Nome da sua planilha no Google Sheets
-NOME_PLANILHA = "meu banco de dados"
+NOME_PLANILHA = "Banco de Dados"
 
 # Lista de abas (cidades) que devem ser atualizadas
 ABAS_CIDADES = [
