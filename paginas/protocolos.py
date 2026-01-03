@@ -370,20 +370,45 @@ def app(TABELA):
     # 1️⃣ ABA: PROTOCOLOS ENCONTRADOS
     # ---------------------------
     with aba_princ:
-        if df.empty:
-            st.info("Nenhum protocolo encontrado.")
+        # Cria coluna de data convertida
+        df["Validade_dt"] = pd.to_datetime(df["Validade do Cercon"], format="%d/%m/%Y", errors="coerce")
+
+        # Cria coluna com o mês/ano no formato "Janeiro/2024"
+        meses_pt = {
+            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+
+        df["MesAno"] = df["Validade_dt"].apply(
+            lambda d: f"{meses_pt.get(d.month, '')}/{d.year}" if pd.notna(d) else ""
+        )
+
+
+        # Lista de meses disponíveis
+        meses_disponiveis = sorted(df["MesAno"].dropna().unique())
+
+        if not meses_disponiveis:
+            st.info("Nenhum protocolo com data de Cercon válida.")
+            st.stop()
+
+        # Selectbox para escolher o mês
+        mes_selecionado = st.selectbox("📆 Filtrar por mês de validade do Cercon", meses_disponiveis)
+
+        # Filtra os protocolos daquele mês
+        df_mes = df[df["MesAno"] == mes_selecionado]
+
+        if df_mes.empty:
+            st.warning(f"Nenhum protocolo com Cercon válido em {mes_selecionado}.")
         else:
-            for idx, row in df.iterrows():
+            for idx, row in df_mes.iterrows():
                 with st.expander(f"🧾 {row['Nº de Protocolo']} — {row['Nome Fantasia']}"):
-                    dados = formulario_protocolo(row,prefix=f"princ_{row['ID']}_{idx}")
+                    dados = formulario_protocolo(row, prefix=f"princ_{row['ID']}_{idx}")
 
-
-                    # Controle da confirmação de exclusão
                     confirma_key = f"confirma_exclusao_{row['ID']}"
                     if confirma_key not in st.session_state:
                         st.session_state[confirma_key] = False
 
-                    # Formulário de ações (atualizar / excluir)
                     with st.form(key=f"form_acoes_princ_{row['ID']}_{idx}"):
                         col1, col2 = st.columns(2)
                         atualizar = col1.form_submit_button("💾 Atualizar")
@@ -409,23 +434,10 @@ def app(TABELA):
                             st.rerun()
 
                         if excluir:
-                            st.session_state[confirma_key] = True
-
-                    # Confirmação de exclusão FORA do form
-                    if st.session_state.get(confirma_key, False):
-                        st.warning(f"❗ Tem certeza que deseja excluir o protocolo {row['Nº de Protocolo']}?")
-                        col_c1, col_c2 = st.columns(2)
-                        confirma = col_c1.button("🚨 Confirmar Exclusão", key=f"confirma_{row['ID']}")
-                        cancela = col_c2.button("Cancelar", key=f"cancela_{row['ID']}")
-
-                        if confirma:
-                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
+                            delete(TABELA, where=f"ID,eq,{row['ID']}")
                             st.success("🗑️ Protocolo excluído com sucesso!")
-                            st.session_state[confirma_key] = False
                             st.rerun()
-                        elif cancela:
-                            st.info("✅ Exclusão cancelada.")
-                            st.session_state[confirma_key] = False
+
 
 
     # ---------------------------
