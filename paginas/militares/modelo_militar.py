@@ -119,42 +119,38 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
         
 
     df["DataProt_dt"] = pd.to_datetime(df["Data de Protocolo"], dayfirst=True, errors="coerce")
-    hoje = pd.Timestamp.today().normalize()
-    sete_dias_atras = hoje - pd.Timedelta(days=7)
-
 
     df_atr = df[df["Militar Responsável"] == nome_militar]
 
     # 🔒 Controle de IDs já exibidos para evitar repetições nas abas
     ids_exibidos = set()
 
-    # 🟡 Em andamento
+    # 🆕 Novos = Protocolado
+    df_novos = df_atr[
+        (df_atr["Andamento"] == "Protocolado") &
+        (~df_atr["ID"].isin(ids_exibidos))
+    ]
+    ids_exibidos.update(df_novos["ID"])
+
+    # 🟡 Em andamento = Vistoria Feita
     df_and = df_atr[
-        df_atr["Andamento"].isin(["Protocolado", "Vistoria Feita"]) &
+        (df_atr["Andamento"] == "Vistoria Feita") &
         (~df_atr["ID"].isin(ids_exibidos))
     ]
     ids_exibidos.update(df_and["ID"])
 
-    # 🟢 Concluídos
+    # 🟢 Concluídos = Cercon Impresso
     df_conc = df_atr[
-        df_atr["Andamento"].isin(["Cercon Impresso", "Empresa Encerrou"]) &
+        (df_atr["Andamento"] == "Cercon Impresso") &
         (~df_atr["ID"].isin(ids_exibidos))
     ]
     ids_exibidos.update(df_conc["ID"])
 
-    # 🔴 Pendentes
+    # 🔴 Pendentes = todo o resto
     df_pend = df_atr[
-        (df_atr["Andamento"] == "Empresa/Proprietário Não Localizado") &
         (~df_atr["ID"].isin(ids_exibidos))
     ]
-    ids_exibidos.update(df_pend["ID"])
 
-    # 🆕 Novos atribuídos nos últimos 7 dias
-    df_novos = df_atr[
-    (df_atr["DataProt_dt"].notna()) &
-    (df_atr["DataProt_dt"] >= sete_dias_atras) &
-    (~df_atr["ID"].isin(ids_exibidos))
-]
 
 
 
@@ -164,7 +160,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
     aba_eventos, aba_est, aba_novos, aba_and, aba_conc, aba_pend = st.tabs([
     f"📅 Eventos",
     f"📊 Estatísticas",
-    f"🆕 Novos (7 dias) ({len(df_novos)})",
+    f"🆕 Novos ({len(df_novos)})",
     f"🟡 Em andamento ({len(df_and)})",
     f"🟢 Concluídos ({len(df_conc)})",
     f"🔴 Pendentes ({len(df_pend)})"
