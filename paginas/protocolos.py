@@ -438,9 +438,10 @@ def app(TABELA):
                             st.rerun()
 
                         if excluir:
-                            delete(TABELA, where=f"ID,eq,{row['ID']}")
+                            delete(TABELA, where=f"ID,eq,{row['ID']}", tipos_colunas=TIPOS_COLUNAS)
                             st.success("🗑️ Protocolo excluído com sucesso!")
                             st.rerun()
+
 
 
 
