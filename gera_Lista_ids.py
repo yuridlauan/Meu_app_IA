@@ -4,7 +4,7 @@ import pandas as pd
 from funcoes_compartilhadas.cria_id import cria_id
 
 # Quantos IDs você quer gerar?
-quantidade = 100  # Mude esse valor conforme o número de linhas da sua planilha
+quantidade = 1000  # Mude esse valor conforme o número de linhas da sua planilha
 
 # Gera os IDs com sequência numérica
 ids = [cria_id(sequencia=str(i + 1)) for i in range(quantidade)]

@@ -227,7 +227,10 @@ def app(TABELA):
             try:
                 data_protocolo = datetime.strptime(dados_novos["Data de Protocolo"], "%d/%m/%Y").date()
                 validade_boleto = datetime.strptime(dados_novos["Validade do Boleto"], "%d/%m/%Y").date()
-                validade_cercon = datetime.strptime(dados_novos["Validade do Cercon"], "%d/%m/%Y").date()
+                if dados_novos["Validade do Cercon"].strip():
+                    validade_cercon = datetime.strptime(dados_novos["Validade do Cercon"], "%d/%m/%Y").date()
+                else:
+                    validade_cercon = ""
             except ValueError:
                 st.error("❌ Uma das datas está em formato inválido. Use dd/mm/aaaa.")
                 st.stop()
@@ -242,7 +245,7 @@ def app(TABELA):
                 "Área (m²)": dados_novos["Área (m²)"],
                 "Notificação": dados_novos["Notificação"],
                 "Validade do Boleto": validade_boleto.strftime("%d/%m/%Y"),
-                "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y"),
+                "Validade do Cercon": validade_cercon.strftime("%d/%m/%Y") if validade_cercon else "",
                 "Tipo de Empresa": dados_novos["Tipo de Empresa"],
                 "Contato": dados_novos["Contato"],
                 "Militar Responsável": dados_novos["Militar Responsável"],
@@ -418,7 +421,8 @@ def app(TABELA):
                             try:
                                 datetime.strptime(dados["Data de Protocolo"], "%d/%m/%Y")
                                 datetime.strptime(dados["Validade do Boleto"], "%d/%m/%Y")
-                                datetime.strptime(dados["Validade do Cercon"], "%d/%m/%Y")
+                                if dados["Validade do Cercon"].strip():
+                                    datetime.strptime(dados["Validade do Cercon"], "%d/%m/%Y")
                             except ValueError:
                                 st.error("❌ Uma das datas está em formato inválido. Use dd/mm/aaaa.")
                                 st.stop()
