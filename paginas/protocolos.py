@@ -326,16 +326,6 @@ def app(TABELA):
     ids_exibidos.update(df_vencidos["ID"])
     qtd_vencidos = df_vencidos.shape[0]
 
-    # --- EXPIRADOS ---
-    df_expirados = df_alert[
-        (
-            (df_alert["Boleto_dt"] < pd.Timestamp(hoje)) |
-            (df_alert["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje))
-        ) & df_alert["Andamento"].isin(["Protocolado", "Vistoria Feita"])
-    ]
-    df_expirados = df_expirados[~df_expirados["ID"].isin(ids_exibidos)]
-    ids_exibidos.update(df_expirados["ID"])
-    qtd_expirados = df_expirados.shape[0]
 
     # --- SEM CERCON ---
     df_semcercon = df_alert[
@@ -357,14 +347,13 @@ def app(TABELA):
     ABA1 = "📋 Protocolos Encontrados"
     ABA2 = f"🟨 Cercons Próximos ({qtd_proximos})" if qtd_proximos > 0 else "🟨 Cercons Próximos (0)"
     ABA3 = f"🟥 Cercons Vencidos ({qtd_vencidos})" if qtd_vencidos > 0 else "🟥 Cercons Vencidos (0)"
-    ABA4 = f"⚠️ Expirados ({qtd_expirados})" if qtd_expirados > 0 else "⚠️ Expirados (0)"
     ABA5 = f"🆕 Novos ({qtd_novos})" if qtd_novos > 0 else "🆕 Novos (0)"
     ABA6 = f"⛔ Sem Cercon ({qtd_semcercon})" if qtd_semcercon > 0 else "⛔ Sem Cercon (0)"
 
     # --- Cria as abas com badges ---
     # --- Cria as abas com badges ---
-    aba_princ, aba_prox, aba_venc, aba_exp, aba_novos, aba_semcercon = st.tabs([
-    ABA1, ABA2, ABA3, ABA4, ABA5, ABA6
+    aba_princ, aba_prox, aba_venc, aba_novos, aba_semcercon = st.tabs([
+    ABA1, ABA2, ABA3, ABA5, ABA6
 ])
 
 
@@ -580,96 +569,7 @@ def app(TABELA):
 
 
    
-    # ---------------------------
-# 4️⃣ ABA: PROCESSOS EXPIRADOS
-# ---------------------------
-    with aba_exp:
-        st.markdown("### ⚠️ Processos Expirados")
-
-        # 🔹 Critério 1: Boleto vencido e andamento = Protocolado ou Vistoria Feita
-        boleto_vencido = (
-            (df_temp["Boleto_dt"] < pd.Timestamp(hoje)) &
-            (df_temp["Andamento"].isin(["Protocolado", "Vistoria Feita"]))
-        )
-
-        # 🔹 Critério 2: Inatividade (> 120 dias do boleto) e andamento = Protocolado ou Vistoria Feita
-        inatividade = (
-            (df_temp["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)) &
-            (df_temp["Andamento"].isin(["Protocolado", "Vistoria Feita"]))
-        )
-
-        df_expirados = df_temp[
-            boleto_vencido | inatividade
-        ].sort_values("DataProt_dt", ascending=False)
-
-        if df_expirados.empty:
-            st.info("Nenhum processo expirado.")
-        else:
-            for idx, row in df_expirados.iterrows():
-
-                # 🔹 Definição do motivo
-                if (
-                    row["Boleto_dt"] + pd.Timedelta(days=120) < pd.Timestamp(hoje)
-                    and row["Andamento"] != "Cercon Impresso"
-                ):
-                    motivo = "Inatividade (> 120 dias após vencimento do boleto)"
-                else:
-                    motivo = "Boleto Vencido"
-
-                with st.expander(
-                    f"⚠️ {row['Nº de Protocolo']} — {row['Nome Fantasia']} ({motivo})",
-                    expanded=False
-                ):
-                    dados = formulario_protocolo(row, prefix=f"exp_{row['ID']}_{idx}")
-
-                    confirma_key = f"confirma_exclusao_exp_{row['ID']}"
-                    if confirma_key not in st.session_state:
-                        st.session_state[confirma_key] = False
-
-                    with st.form(key=f"form_exp_{row['ID']}_{idx}"):
-                        col1, col2 = st.columns(2)
-                        atualizar = col1.form_submit_button("💾 Atualizar")
-                        excluir = col2.form_submit_button("🗑️ Excluir")
-
-                        if atualizar:
-                            update(
-                                TABELA,
-                                list(dados.keys()),
-                                list(dados.values()),
-                                where=f"ID,eq,{row['ID']}",
-                                tipos_colunas=TIPOS_COLUNAS
-                            )
-                            st.success("Atualizado!")
-                            st.rerun()
-
-                        if excluir:
-                            st.session_state[confirma_key] = True
-
-                    # 🔹 Confirmação de exclusão
-                    if st.session_state.get(confirma_key, False):
-                        st.warning("Deseja excluir este protocolo?")
-                        col_c1, col_c2 = st.columns(2)
-
-                        confirma = col_c1.button(
-                            "🚨 Confirmar Exclusão",
-                            key=f"del_exp_{row['ID']}"
-                        )
-                        cancela = col_c2.button(
-                            "Cancelar",
-                            key=f"cancela_exp_{row['ID']}"
-                        )
-
-                        if confirma:
-                            delete(
-                                TABELA,
-                                where=f"ID,eq,{row['ID']}",
-                                tipos_colunas=TIPOS_COLUNAS
-                            )
-                            st.success("Excluído!")
-                            st.rerun()
-                        elif cancela:
-                            st.session_state[confirma_key] = False
-
+  
     # ---------------------------
 # 5️⃣ ABA: NOVOS PROTOCOLOS CADASTRADOS HOJE
 # ---------------------------
