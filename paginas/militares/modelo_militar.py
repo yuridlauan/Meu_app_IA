@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
+import math
 
 from paginas.protocolos import formulario_protocolo, TIPOS_COLUNAS
 from funcoes_compartilhadas.conversa_banco import select_protocolos, select, update, delete, insert
@@ -24,6 +25,49 @@ def corrige_data(valor):
         return str(valor)
 
 # ---------------------------------------------------------
+# PAGINAÇÃO PADRÃO (REUTILIZÁVEL EM QUALQUER ABA)
+# ---------------------------------------------------------
+def paginar_dataframe(df, chave):
+    ITENS_POR_PAGINA = 10
+
+    # Inicializa página
+    if f"pagina_{chave}" not in st.session_state:
+        st.session_state[f"pagina_{chave}"] = 1
+
+    pagina = st.session_state[f"pagina_{chave}"]
+
+    total_paginas = max(1, math.ceil(len(df) / ITENS_POR_PAGINA))
+
+    inicio = (pagina - 1) * ITENS_POR_PAGINA
+    fim = inicio + ITENS_POR_PAGINA
+
+    df_paginado = df.iloc[inicio:fim]
+
+    # CONTROLES
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col1:
+        if st.button("⬅️", key=f"ant_{chave}"):
+            if pagina > 1:
+                st.session_state[f"pagina_{chave}"] -= 1
+                st.rerun()
+
+    with col2:
+        st.markdown(
+            f"<div style='text-align:center'>Página {pagina} de {total_paginas}</div>",
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        if st.button("➡️", key=f"prox_{chave}"):
+            if pagina < total_paginas:
+                st.session_state[f"pagina_{chave}"] += 1
+                st.rerun()
+
+    return df_paginado
+
+
+# ---------------------------------------------------------
 # LISTAR PROTOCOLOS EM UMA ABA
 # ---------------------------------------------------------
 def listar_protocolos(df_filtrado, TABELA, contexto):
@@ -31,15 +75,29 @@ def listar_protocolos(df_filtrado, TABELA, contexto):
         st.info("Nenhum protocolo nesta categoria.")
         return
 
-    for _, row in df_filtrado.iterrows():
+def listar_protocolos(df_filtrado, TABELA, contexto):
+    if df_filtrado.empty:
+        st.info("Nenhum protocolo nesta categoria.")
+        return
+
+    # -----------------------------------------------------
+    # APLICA PAGINAÇÃO
+    # -----------------------------------------------------
+    df_filtrado = paginar_dataframe(df_filtrado, contexto)
+
+    # -----------------------------------------------------
+    # LISTAGEM
+    # -----------------------------------------------------
+    for idx, row in df_filtrado.iterrows():
         titulo = f"{row['Nº de Protocolo']} — {row['Nome Fantasia']}"
         cidade = row.get("Cidade", "")
+
         if cidade:
             titulo = f"{cidade} | {titulo}"
 
         with st.expander(titulo):
             id_linha = str(row["ID"]) if pd.notna(row["ID"]) else "sem_id"
-            prefix = f"{contexto}_{id_linha}_{_}"  # _ é o índice da linha (garante unicidade)
+            prefix = f"{contexto}_{id_linha}_{idx}"
 
             dados = formulario_protocolo(row, prefix=prefix)
 
@@ -53,10 +111,6 @@ def listar_protocolos(df_filtrado, TABELA, contexto):
                 excluir = c2.form_submit_button("🗑️ Excluir")
 
                 if atualizar:
-                    for k in list(st.session_state.keys()):
-                        if prefix in k:
-                            del st.session_state[k]
-
                     update(
                         row["Cidade"],
                         list(dados.keys()),
@@ -225,7 +279,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
             else:
                 st.write("### 📌 Eventos do mês")
 
-                for _, linha in eventos_do_mes.iterrows():
+                for idx, linha in eventos_do_mes.iterrows():
                     col1, col2 = st.columns([5, 1])
 
                     with col1:
