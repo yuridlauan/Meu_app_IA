@@ -199,19 +199,73 @@ def formulario_protocolo(dados=None, prefix=""):
 # -----------------------------------------------------------
 #                     APLICATIVO PRINCIPAL
 # -----------------------------------------------------------
+def paginar_dataframe(df, chave):
+    """
+    Pagina qualquer DataFrame com controle independente por aba.
+    chave = identificador único da aba
+    """
+
+    ITENS_POR_PAGINA = 10
+
+    # Inicializa página da aba
+    if f"pagina_{chave}" not in st.session_state:
+        st.session_state[f"pagina_{chave}"] = 1
+
+    pagina = st.session_state[f"pagina_{chave}"]
+
+    total_paginas = max(1, math.ceil(len(df) / ITENS_POR_PAGINA))
+
+    inicio = (pagina - 1) * ITENS_POR_PAGINA
+    fim = inicio + ITENS_POR_PAGINA
+
+    df_paginado = df.iloc[inicio:fim]
+
+    # CONTROLES
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col1:
+        if st.button("⬅️", key=f"ant_{chave}"):
+            if pagina > 1:
+                st.session_state[f"pagina_{chave}"] -= 1
+                st.rerun()
+
+    with col2:
+        st.markdown(
+            f"<div style='text-align:center'>Página {pagina} de {total_paginas}</div>",
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        if st.button("➡️", key=f"prox_{chave}"):
+            if pagina < total_paginas:
+                st.session_state[f"pagina_{chave}"] += 1
+                st.rerun()
+
+    return df_paginado
+
 
 def app(TABELA):
     st.title(f"📂 Gerenciamento de Protocolos — {TABELA}")
 
-    # Carrega todos os dados da tabela
+    # -----------------------------------------------------------
+    # CARREGA DADOS UMA ÚNICA VEZ (REGRA DE OURO)
+    # -----------------------------------------------------------
     df_all = carregar_dados(TABELA)
 
-    # Busca geral (aplica só na aba "Protocolos Encontrados")
+    total_registros = len(df_all)
+
+    # -----------------------------------------------------------
+    # BUSCA GLOBAL
+    # -----------------------------------------------------------
     termo = st.text_input("🔎 Buscar protocolo (por nome, CPF, militar, tipo...)")
+
     df = df_all.copy()
+
     if termo:
         termo_low = termo.lower()
         df = df[df.apply(lambda r: termo_low in str(r.values).lower(), axis=1)]
+
+    st.divider()
 
     # ----------------- CADASTRAR NOVO PROTOCOLO -----------------
     with st.expander("➕ Cadastrar Novo Protocolo", expanded=False):
@@ -258,15 +312,8 @@ def app(TABELA):
             st.rerun()
 
     st.divider()
-    st.subheader(f"📋 Protocolos Encontrados: {len(df)}")
-
-    # -----------------------------------------------------------
-    #       PREPARO DOS DATAFRAMES PARA FILTROS DE CERCON
-    # -----------------------------------------------------------
-    # -----------------------------------------------------------
-#       PREPARO DOS DATAFRAMES PARA FILTROS E NOVOS HOJE
-# -----------------------------------------------------------
-
+    st.subheader(f"📋 Protocolos Encontrados: {total_registros}")
+ 
     df_temp = df_all.copy()
 
     # Conversão segura das datas
@@ -390,6 +437,9 @@ def app(TABELA):
         # Filtra os protocolos daquele mês
         df_mes = df[df["MesAno"] == mes_selecionado]
 
+        # PAGINAÇÃO AQUI
+        df_mes = paginar_dataframe(df_mes, "principal")
+
         if df_mes.empty:
             st.warning(f"Nenhum protocolo com Cercon válido em {mes_selecionado}.")
         else:
@@ -444,6 +494,8 @@ def app(TABELA):
             (df_temp["Validade_dt"] >= pd.Timestamp(hoje)) &
             (df_temp["Validade_dt"] <= pd.Timestamp(limite_proximo))
         ].sort_values("Validade_dt")
+
+        df_proximos = paginar_dataframe(df_proximos, "prox")
 
         if df_proximos.empty:
             st.info("Nenhum Cercon próximo ao vencimento nos próximos 30 dias.")
@@ -512,6 +564,7 @@ def app(TABELA):
             (df_temp["Validade_dt"] < pd.Timestamp(hoje)) &
             (df_temp["Validade_dt"] >= pd.Timestamp(limite_vencidos))
         ].sort_values("Validade_dt")
+        df_vencidos = paginar_dataframe(df_vencidos, "venc")
 
         if df_vencidos.empty:
             st.success("Nenhum Cercon vencido nos últimos 365 dias! 🎉")
@@ -577,9 +630,9 @@ def app(TABELA):
             st.markdown("### 🆕 Novos Protocolos Cadastrados Hoje")
 
             df_novos = df_temp[
-                (df_temp["DataProt_dt"] == pd.Timestamp(hoje))
+                (df_temp["DataProt_dt"].dt.date == hoje)
             ].sort_values("DataProt_dt", ascending=False)
-
+            df_novos = paginar_dataframe(df_novos, "novos")
             if df_novos.empty:
                 st.info("Nenhum protocolo foi cadastrado hoje.")
             else:
@@ -641,6 +694,7 @@ def app(TABELA):
                 (df_alert["Andamento"] != "Cercon Impresso")
             )
         ]
+        df_semcercon = paginar_dataframe(df_semcercon, "semcercon")
 
         if df_semcercon.empty:
             st.info("Nenhum protocolo sem Cercon.")
