@@ -117,7 +117,8 @@ def formulario_protocolo(dados=None, prefix=""):
             "Análise de Projeto",
             "Substituição de Projeto",
             "Ponto de Referência",
-            "Credenciamento Extintor/Brigada"
+            "Credenciamento Extintor/Brigada",
+            "Denúncia"
         ]
         tipo_valor = dados.get("Tipo de Serviço") or opcoes_tipo[0]
         tipo_index = opcoes_tipo.index(tipo_valor) if tipo_valor in opcoes_tipo else 0
