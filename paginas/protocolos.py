@@ -392,6 +392,7 @@ def app(TABELA):
 
 
     # --- Construção dos badges ---
+    
     ABA1 = "📋 Protocolos Encontrados"
     ABA2 = f"🟨 Cercons Próximos ({qtd_proximos})" if qtd_proximos > 0 else "🟨 Cercons Próximos (0)"
     ABA3 = f"🟥 Cercons Vencidos ({qtd_vencidos})" if qtd_vencidos > 0 else "🟥 Cercons Vencidos (0)"
@@ -400,11 +401,139 @@ def app(TABELA):
 
     # --- Cria as abas com badges ---
     # --- Cria as abas com badges ---
-    aba_princ, aba_prox, aba_venc, aba_novos, aba_semcercon = st.tabs([
-    ABA1, ABA2, ABA3, ABA5, ABA6
+    aba_eventos, aba_princ, aba_prox, aba_venc, aba_novos, aba_semcercon = st.tabs([
+    "📅 Eventos",
+    ABA1,
+    ABA2,
+    ABA3,
+    ABA5,
+    ABA6
 ])
 
+    # ---------------------------
+    # 📅 ABA: EVENTOS
+    # ---------------------------
+    with aba_eventos:
 
+        st.subheader("📅 Agenda de Eventos (por mês)")
+
+        data_escolhida = st.date_input(
+            "Selecione uma data (usada como referência para o mês):",
+            date.today(),
+            format="DD/MM/YYYY"
+        )
+
+        # ---------------------------------------------------
+        # NOVO EVENTO
+        # ---------------------------------------------------
+        with st.popover("➕ Novo Evento"):
+
+            with st.form("form_evento"):
+
+                titulo = st.text_input("Título do Evento")
+
+                descricao = st.text_area("Descrição (opcional)")
+
+                enviar = st.form_submit_button("Salvar")
+
+                if enviar:
+
+                    if not titulo.strip():
+
+                        st.warning("Informe um título para o evento.")
+
+                    else:
+
+                        evento = {
+                            "Data": data_escolhida.strftime("%d/%m/%Y"),
+                            "Título": titulo.strip(),
+                            "Descrição": descricao.strip(),
+                        }
+
+                        insert("eventos", evento)
+
+                        st.success("✅ Evento salvo com sucesso!")
+
+                        st.cache_data.clear()
+
+                        st.rerun()
+
+        # ---------------------------------------------------
+        # CARREGA EVENTOS
+        # ---------------------------------------------------
+        df_eventos = select(
+            "eventos",
+            {
+                "ID": "id",
+                "Data": "data",
+                "Título": "texto",
+                "Descrição": "texto"
+            }
+        )
+
+        # ---------------------------------------------------
+        # LISTA EVENTOS DO MÊS
+        # ---------------------------------------------------
+        if not df_eventos.empty:
+
+            df_eventos["Data_dt"] = pd.to_datetime(
+                df_eventos["Data"],
+                dayfirst=True,
+                errors="coerce"
+            )
+
+            mes = data_escolhida.month
+
+            ano = data_escolhida.year
+
+            eventos_do_mes = df_eventos[
+                (df_eventos["Data_dt"].dt.month == mes) &
+                (df_eventos["Data_dt"].dt.year == ano)
+            ]
+
+            if eventos_do_mes.empty:
+
+                st.info("Nenhum evento neste mês.")
+
+            else:
+
+                st.write("### 📌 Eventos do mês")
+
+                for idx, linha in eventos_do_mes.iterrows():
+
+                    col1, col2 = st.columns([5, 1])
+
+                    with col1:
+
+                        st.markdown(
+                            f"📅 **{linha['Data']} — {linha['Título']}**"
+                        )
+
+                        if linha["Descrição"]:
+
+                            st.caption(linha["Descrição"])
+
+                    with col2:
+
+                        if st.button(
+                            "🗑️",
+                            key=f"del_evt_{linha['ID']}"
+                        ):
+
+                            delete(
+                                "eventos",
+                                where=f"ID,eq,{linha['ID']}",
+                                tipos_colunas={
+                                    "ID": "id",
+                                    "Data": "data",
+                                    "Título": "texto",
+                                    "Descrição": "texto"
+                                }
+                            )
+
+                            st.success("✅ Evento excluído!")
+
+                            st.rerun()
 
     # ---------------------------
     # 1️⃣ ABA: PROTOCOLOS ENCONTRADOS
