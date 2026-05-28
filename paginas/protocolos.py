@@ -496,7 +496,8 @@ def app(TABELA):
 
         # GARANTE DATAFRAME
         df_eventos = pd.DataFrame(df_eventos)
-
+        # Corrige IDs para evitar erro no update/delete
+        df_eventos["ID"] = df_eventos["ID"].astype(str).str.strip()
         # ---------------------------------------------------
         # SEM EVENTOS
         # ---------------------------------------------------
@@ -617,7 +618,7 @@ def app(TABELA):
                                                 edit_titulo.strip(),
                                                 edit_descricao.strip()
                                             ],
-                                            where=f"ID,eq,{evento['ID']}",
+                                            where=f"ID,eq,{str(evento['ID']).strip()}",
                                             tipos_colunas={
                                                 "ID": "id",
                                                 "Data": "data",
@@ -647,7 +648,7 @@ def app(TABELA):
 
                                 delete(
                                     "eventos",
-                                    where=f"ID,eq,{evento['ID']}",
+                                    where=f"ID,eq,{str(evento['ID']).strip()}",
                                     tipos_colunas={
                                         "ID": "id"
                                     }

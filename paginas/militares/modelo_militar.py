@@ -313,6 +313,8 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
         # GARANTE DATAFRAME
         df_eventos = pd.DataFrame(df_eventos)
+        # Normaliza IDs para evitar falha no update/delete
+        df_eventos["ID"] = df_eventos["ID"].astype(str).str.strip()
 
         # ---------------------------------------------------
         # SEM EVENTOS
@@ -434,7 +436,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
                                                 edit_titulo.strip(),
                                                 edit_descricao.strip()
                                             ],
-                                            where=f"ID,eq,{evento['ID']}",
+                                            where=f"ID,eq,{str(evento['ID']).strip()}",
                                             tipos_colunas={
                                                 "ID": "id",
                                                 "Data": "data",
@@ -464,7 +466,7 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 
                                 delete(
                                     "eventos",
-                                    where=f"ID,eq,{evento['ID']}",
+                                    where=f"ID,eq,{str(evento['ID']).strip()}",
                                     tipos_colunas={
                                         "ID": "id"
                                     }

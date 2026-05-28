@@ -392,6 +392,7 @@ def app(TABELA):
 
 
     # --- Construção dos badges ---
+    
     ABA1 = "📋 Protocolos Encontrados"
     ABA2 = f"🟨 Cercons Próximos ({qtd_proximos})" if qtd_proximos > 0 else "🟨 Cercons Próximos (0)"
     ABA3 = f"🟥 Cercons Vencidos ({qtd_vencidos})" if qtd_vencidos > 0 else "🟥 Cercons Vencidos (0)"
@@ -400,12 +401,264 @@ def app(TABELA):
 
     # --- Cria as abas com badges ---
     # --- Cria as abas com badges ---
-    aba_princ, aba_prox, aba_venc, aba_novos, aba_semcercon = st.tabs([
-    ABA1, ABA2, ABA3, ABA5, ABA6
+    aba_eventos, aba_princ, aba_prox, aba_venc, aba_novos, aba_semcercon = st.tabs([
+    "📅 Eventos",
+    ABA1,
+    ABA2,
+    ABA3,
+    ABA5,
+    ABA6
 ])
 
+    # ---------------------------
+    # 📅 ABA: EVENTOS
+    # ---------------------------
+    with aba_eventos:
 
+        st.subheader("📅 Agenda de Eventos")
 
+        # ---------------------------------------------------
+        # DATA DE REFERÊNCIA
+        # ---------------------------------------------------
+        data_escolhida = st.date_input(
+            "Selecione uma data de referência:",
+            value=date.today(),
+            format="DD/MM/YYYY",
+            key="agenda_data_ref"
+        )
+
+        st.divider()
+
+        # ---------------------------------------------------
+        # NOVO EVENTO
+        # ---------------------------------------------------
+        with st.popover("➕ Novo Evento"):
+
+            with st.form("form_novo_evento"):
+
+                nova_data = st.date_input(
+                    "Data do Evento",
+                    value=data_escolhida,
+                    format="DD/MM/YYYY",
+                    key="novo_evento_data"
+                )
+
+                novo_titulo = st.text_input(
+                    "Título",
+                    key="novo_evento_titulo"
+                )
+
+                nova_descricao = st.text_area(
+                    "Descrição",
+                    key="novo_evento_desc"
+                )
+
+                salvar_evento = st.form_submit_button("💾 Salvar Evento")
+
+                if salvar_evento:
+
+                    if not novo_titulo.strip():
+
+                        st.warning("⚠️ Informe um título.")
+
+                    else:
+
+                        evento = {
+                            "ID": cria_id(),
+                            "Data": nova_data.strftime("%d/%m/%Y"),
+                            "Título": novo_titulo.strip(),
+                            "Descrição": nova_descricao.strip(),
+                        }
+
+                        insert(
+                            "eventos",
+                            evento
+                        )
+
+                        st.success("✅ Evento cadastrado com sucesso!")
+
+                        st.cache_data.clear()
+
+                        st.rerun()
+
+        # ---------------------------------------------------
+        # CARREGA EVENTOS
+        # ---------------------------------------------------
+        df_eventos = select(
+            "eventos",
+            {
+                "ID": "id",
+                "Data": "data",
+                "Título": "texto",
+                "Descrição": "texto"
+            }
+        )
+
+        # GARANTE DATAFRAME
+        df_eventos = pd.DataFrame(df_eventos)
+
+        # ---------------------------------------------------
+        # SEM EVENTOS
+        # ---------------------------------------------------
+        if df_eventos.empty:
+
+            st.info("Nenhum evento cadastrado.")
+
+        else:
+
+            # ---------------------------------------------------
+            # LIMPA E CONVERTE DATAS
+            # ---------------------------------------------------
+            df_eventos["Data"] = df_eventos["Data"].astype(str).str.strip()
+
+            df_eventos["Data_dt"] = pd.to_datetime(
+                df_eventos["Data"],
+                format="%d/%m/%Y",
+                dayfirst=True,
+                errors="coerce"
+            )
+
+            # REMOVE DATAS INVÁLIDAS
+            df_eventos = df_eventos[df_eventos["Data_dt"].notna()]
+
+            # ---------------------------------------------------
+            # FILTRA PELO MÊS DA DATA ESCOLHIDA
+            # ---------------------------------------------------
+            df_mes = df_eventos[
+                (df_eventos["Data_dt"].dt.month == data_escolhida.month) &
+                (df_eventos["Data_dt"].dt.year == data_escolhida.year)
+            ].copy()
+
+            # ---------------------------------------------------
+            # ORDENA DA MAIS RECENTE PARA MAIS ANTIGA
+            # ---------------------------------------------------
+            df_mes = df_mes.sort_values(
+                by="Data_dt",
+                ascending=False
+            )
+
+            # ---------------------------------------------------
+            # SEM EVENTOS NO MÊS
+            # ---------------------------------------------------
+            if df_mes.empty:
+
+                st.info("Nenhum evento neste mês.")
+
+            else:
+
+                # ---------------------------------------------------
+                # LOOP DOS EVENTOS
+                # ---------------------------------------------------
+                for _, evento in df_mes.iterrows():
+
+                    with st.container(border=True):
+
+                        col1, col2, col3 = st.columns([8,1,1])
+
+                        # ----------------------------------------
+                        # TEXTO EVENTO
+                        # ----------------------------------------
+                        with col1:
+
+                            st.markdown(
+                                f"""
+                                ### 📅 {evento['Data']}
+
+                                **{evento['Título']}**
+
+                                {evento['Descrição']}
+                                """
+                            )
+
+                        # ----------------------------------------
+                        # EDITAR EVENTO
+                        # ----------------------------------------
+                        with col2:
+
+                            with st.popover("✏️"):
+
+                                with st.form(f"form_edit_{evento['ID']}"):
+
+                                    edit_data = st.date_input(
+                                        "Data",
+                                        value=evento["Data_dt"].date(),
+                                        format="DD/MM/YYYY",
+                                        key=f"edit_data_{evento['ID']}"
+                                    )
+
+                                    edit_titulo = st.text_input(
+                                        "Título",
+                                        value=evento["Título"],
+                                        key=f"edit_titulo_{evento['ID']}"
+                                    )
+
+                                    edit_descricao = st.text_area(
+                                        "Descrição",
+                                        value=evento["Descrição"],
+                                        key=f"edit_desc_{evento['ID']}"
+                                    )
+
+                                    salvar_edicao = st.form_submit_button(
+                                        "💾 Atualizar"
+                                    )
+
+                                    # ----------------------------------------
+                                    # SALVA EDIÇÃO
+                                    # ----------------------------------------
+                                    if salvar_edicao:
+
+                                        data_formatada = edit_data.strftime("%d/%m/%Y")
+
+                                        update(
+                                            "eventos",
+                                            ["Data", "Título", "Descrição"],
+                                            [
+                                                data_formatada,
+                                                edit_titulo.strip(),
+                                                edit_descricao.strip()
+                                            ],
+                                            where=f"ID,eq,{evento['ID']}",
+                                            tipos_colunas={
+                                                "ID": "id",
+                                                "Data": "data",
+                                                "Título": "texto",
+                                                "Descrição": "texto"
+                                            }
+                                        )
+
+                                        st.success("✅ Evento atualizado!")
+
+                                        st.cache_data.clear()
+
+                                        st.rerun()
+
+                        # ----------------------------------------
+                        # EXCLUIR EVENTO
+                        # ----------------------------------------
+                        with col3:
+
+                            excluir = st.button(
+                                "🗑️",
+                                key=f"del_evento_{evento['ID']}",
+                                use_container_width=True
+                            )
+
+                            if excluir:
+
+                                delete(
+                                    "eventos",
+                                    where=f"ID,eq,{evento['ID']}",
+                                    tipos_colunas={
+                                        "ID": "id"
+                                    }
+                                )
+
+                                st.success("🗑️ Evento removido!")
+
+                                st.cache_data.clear()
+
+                                st.rerun()
+    
     # ---------------------------
     # 1️⃣ ABA: PROTOCOLOS ENCONTRADOS
     # ---------------------------
