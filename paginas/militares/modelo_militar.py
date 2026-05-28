@@ -221,38 +221,86 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
 ])
 
 
-
+     # ---------------------------
+# 📅 ABA: EVENTOS
+# ---------------------------
     with aba_eventos:
-        st.subheader("📅 Agenda de Eventos (por mês)")
+
+        st.subheader("📅 Agenda de Eventos")
+
+        # ---------------------------------------------------
+        # DATA DE REFERÊNCIA
+        # ---------------------------------------------------
         data_escolhida = st.date_input(
-            "Selecione uma data (usada como referência para o mês):",
-            date.today(),
-            format="DD/MM/YYYY"
+            "Selecione uma data de referência:",
+            value=date.today(),
+            format="DD/MM/YYYY",
+            key="agenda_data_ref"
         )
 
+        st.divider()
 
+        # ---------------------------------------------------
+        # NOVO EVENTO
+        # ---------------------------------------------------
         with st.popover("➕ Novo Evento"):
-                with st.form("form_evento"):
-                    titulo = st.text_input("Título do Evento")
-                    descricao = st.text_area("Descrição (opcional)")
-                    enviar = st.form_submit_button("Salvar")
-                    if enviar:
-                        if not titulo.strip():
-                            st.warning("Informe um título para o evento.")
-                        else:
-                            evento = {
-                                "Data": data_escolhida.strftime("%d/%m/%Y"),
-                                "Título": titulo.strip(),
-                                "Descrição": descricao.strip(),
+
+            with st.form("form_novo_evento"):
+
+                nova_data = st.date_input(
+                    "Data do Evento",
+                    value=data_escolhida,
+                    format="DD/MM/YYYY",
+                    key="novo_evento_data"
+                )
+
+                novo_titulo = st.text_input(
+                    "Título",
+                    key="novo_evento_titulo"
+                )
+
+                nova_descricao = st.text_area(
+                    "Descrição",
+                    key="novo_evento_desc"
+                )
+
+                salvar_evento = st.form_submit_button("💾 Salvar Evento")
+
+                if salvar_evento:
+
+                    if not novo_titulo.strip():
+
+                        st.warning("⚠️ Informe um título.")
+
+                    else:
+
+                        evento = {
+                            "ID": cria_id(),
+                            "Data": nova_data.strftime("%d/%m/%Y"),
+                            "Título": novo_titulo.strip(),
+                            "Descrição": nova_descricao.strip(),
+                        }
+
+                        insert(
+                            "eventos",
+                            evento,
+                            tipos_colunas={
+                                "ID": "id",
+                                "Data": "data",
+                                "Título": "texto",
+                                "Descrição": "texto"
                             }
-                            insert("eventos", evento)
-                            st.success("✅ Evento salvo com sucesso!")
-                            st.cache_data.clear()
-                            st.rerun()
+                        )
 
-        
+                        st.success("✅ Evento cadastrado com sucesso!")
 
-        # Lê os dados da aba "eventos"
+                        st.cache_data.clear()
+
+                        st.rerun()
+
+        # ---------------------------------------------------
+        # CARREGA EVENTOS
+        # ---------------------------------------------------
         df_eventos = select(
             "eventos",
             {
@@ -263,46 +311,173 @@ def app(nome_militar, TABELA="Protocolos", admin=False):
             }
         )
 
+        # GARANTE DATAFRAME
+        df_eventos = pd.DataFrame(df_eventos)
 
-        if not df_eventos.empty:
-            df_eventos["Data_dt"] = pd.to_datetime(df_eventos["Data"], dayfirst=True, errors="coerce")
-            mes = data_escolhida.month
-            ano = data_escolhida.year
+        # ---------------------------------------------------
+        # SEM EVENTOS
+        # ---------------------------------------------------
+        if df_eventos.empty:
 
-            eventos_do_mes = df_eventos[
-                (df_eventos["Data_dt"].dt.month == mes) &
-                (df_eventos["Data_dt"].dt.year == ano)
-            ]
+            st.info("Nenhum evento cadastrado.")
 
-            if eventos_do_mes.empty:
+        else:
+
+            # ---------------------------------------------------
+            # LIMPA E CONVERTE DATAS
+            # ---------------------------------------------------
+            df_eventos["Data"] = df_eventos["Data"].astype(str).str.strip()
+
+            df_eventos["Data_dt"] = pd.to_datetime(
+                df_eventos["Data"],
+                format="%d/%m/%Y",
+                dayfirst=True,
+                errors="coerce"
+            )
+
+            # REMOVE DATAS INVÁLIDAS
+            df_eventos = df_eventos[df_eventos["Data_dt"].notna()]
+
+            # ---------------------------------------------------
+            # FILTRA PELO MÊS DA DATA ESCOLHIDA
+            # ---------------------------------------------------
+            df_mes = df_eventos[
+                (df_eventos["Data_dt"].dt.month == data_escolhida.month) &
+                (df_eventos["Data_dt"].dt.year == data_escolhida.year)
+            ].copy()
+
+            # ---------------------------------------------------
+            # ORDENA DA MAIS RECENTE PARA MAIS ANTIGA
+            # ---------------------------------------------------
+            df_mes = df_mes.sort_values(
+                by="Data_dt",
+                ascending=False
+            )
+
+            # ---------------------------------------------------
+            # SEM EVENTOS NO MÊS
+            # ---------------------------------------------------
+            if df_mes.empty:
+
                 st.info("Nenhum evento neste mês.")
+
             else:
-                st.write("### 📌 Eventos do mês")
 
-                for idx, linha in eventos_do_mes.iterrows():
-                    col1, col2 = st.columns([5, 1])
+                # ---------------------------------------------------
+                # LOOP DOS EVENTOS
+                # ---------------------------------------------------
+                for _, evento in df_mes.iterrows():
 
-                    with col1:
-                        st.markdown(f"📅 **{linha['Data']} — {linha['Título']}**")
-                        if linha["Descrição"]:
-                            st.caption(linha["Descrição"])
+                    with st.container(border=True):
 
-                    with col2:
-                        if st.button("🗑️", key=f"del_evt_{linha['ID']}"):
-                            delete(
-                                "eventos",
-                                where=f"ID,eq,{linha['ID']}",
-                                tipos_colunas={
-                                    "ID": "id",
-                                    "Data": "data",
-                                    "Título": "texto",
-                                    "Descrição": "texto"
-                                }
+                        col1, col2, col3 = st.columns([8,1,1])
+
+                        # ----------------------------------------
+                        # TEXTO EVENTO
+                        # ----------------------------------------
+                        with col1:
+
+                            st.markdown(
+                                f"""
+                                ### 📅 {evento['Data']}
+
+                                **{evento['Título']}**
+
+                                {evento['Descrição']}
+                                """
                             )
-                            st.success("✅ Evento excluído!")
-                            st.rerun()
 
+                        # ----------------------------------------
+                        # EDITAR EVENTO
+                        # ----------------------------------------
+                        with col2:
 
+                            with st.popover("✏️"):
+
+                                with st.form(f"form_edit_{evento['ID']}"):
+
+                                    edit_data = st.date_input(
+                                        "Data",
+                                        value=evento["Data_dt"].date(),
+                                        format="DD/MM/YYYY",
+                                        key=f"edit_data_{evento['ID']}"
+                                    )
+
+                                    edit_titulo = st.text_input(
+                                        "Título",
+                                        value=evento["Título"],
+                                        key=f"edit_titulo_{evento['ID']}"
+                                    )
+
+                                    edit_descricao = st.text_area(
+                                        "Descrição",
+                                        value=evento["Descrição"],
+                                        key=f"edit_desc_{evento['ID']}"
+                                    )
+
+                                    salvar_edicao = st.form_submit_button(
+                                        "💾 Atualizar"
+                                    )
+
+                                    # ----------------------------------------
+                                    # SALVA EDIÇÃO
+                                    # ----------------------------------------
+                                    if salvar_edicao:
+
+                                        data_formatada = edit_data.strftime("%d/%m/%Y")
+
+                                        update(
+                                            "eventos",
+                                            ["Data", "Título", "Descrição"],
+                                            [
+                                                data_formatada,
+                                                edit_titulo.strip(),
+                                                edit_descricao.strip()
+                                            ],
+                                            where=f"ID,eq,{evento['ID']}",
+                                            tipos_colunas={
+                                                "ID": "id",
+                                                "Data": "data",
+                                                "Título": "texto",
+                                                "Descrição": "texto"
+                                            }
+                                        )
+
+                                        st.success("✅ Evento atualizado!")
+
+                                        st.cache_data.clear()
+
+                                        st.rerun()
+
+                        # ----------------------------------------
+                        # EXCLUIR EVENTO
+                        # ----------------------------------------
+                        with col3:
+
+                            excluir = st.button(
+                                "🗑️",
+                                key=f"del_evento_{evento['ID']}",
+                                use_container_width=True
+                            )
+
+                            if excluir:
+
+                                delete(
+                                    "eventos",
+                                    where=f"ID,eq,{evento['ID']}",
+                                    tipos_colunas={
+                                        "ID": "id"
+                                    }
+                                )
+
+                                st.success("🗑️ Evento removido!")
+
+                                st.cache_data.clear()
+
+                                st.rerun()
+    
+
+    
     # TABS EXISTENTES
     with aba_novos:
         listar_protocolos(df_novos, TABELA, "novos")
