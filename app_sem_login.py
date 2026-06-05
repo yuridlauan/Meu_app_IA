@@ -111,6 +111,7 @@ PAGINAS = {
         "cadastro_funcionalidades": "Cadastro de Funcionalidades",
         "cadastro_permissoes": "Cadastro de Permissões",
         "painel_financeiro": "Painel Financeiro",
+        "relatorio_operacional": "Relatório Operacional",
         "atualizar_ids": "Atualizar IDs"
     }
 }
