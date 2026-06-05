@@ -290,3 +290,139 @@ def app():
         "Vencem em 30 dias",
         cercons_30
     )
+
+    # ---------------------------------------------------
+    # TIPOS DE SERVIÇO
+    # ---------------------------------------------------
+
+    st.divider()
+
+    st.subheader("📋 Tipos de Serviço")
+
+    tipo_servico = st.selectbox(
+        "Selecione o tipo de serviço",
+        [
+            "Todos",
+            "Vistoria para Funcionamento",
+            "Licenciamento Facilitado",
+            "Análise de Projeto",
+            "Substituição de Projeto",
+            "Ponto de Referência",
+            "Credenciamento Extintor/Brigada",
+            "Denúncia"
+        ]
+    )
+
+    df_servicos = df.copy()
+
+    if tipo_servico != "Todos":
+
+        df_servicos = df_servicos[
+            df_servicos["Tipo de Serviço"]
+            == tipo_servico
+        ]
+
+    st.caption(
+        f"Total encontrado: {len(df_servicos)}"
+    )
+
+    colunas_exibir = [
+        "Data de Protocolo",
+        "Nº de Protocolo",
+        "Nome Fantasia",
+        "Cidade",
+        "Andamento"
+    ]
+
+    df_exibir = df_servicos[
+        colunas_exibir
+    ].copy()
+
+    st.dataframe(
+        df_exibir,
+        use_container_width=True,
+        hide_index=True
+    ) 
+
+    # ---------------------------------------------------
+    # LISTA DE PENDÊNCIAS
+    # ---------------------------------------------------
+
+    st.divider()
+
+    st.subheader("🚨 Pendências")
+
+    opcao_pendencia = st.selectbox(
+        "Selecione a pendência",
+        [
+            "Protocolados sem vistoria",
+            "Vistorias sem Cercon",
+            "Cercons vencidos",
+            "Cercons vencendo em 30 dias"
+        ]
+    )
+
+    hoje = pd.Timestamp.today()
+
+    # --------------------------------------------
+    # FILTROS DAS PENDÊNCIAS
+    # --------------------------------------------
+
+    if opcao_pendencia == "Protocolados sem vistoria":
+
+        df_pendencias = df[
+            df["Andamento"] == "Protocolado"
+        ]
+
+    elif opcao_pendencia == "Vistorias sem Cercon":
+
+        df_pendencias = df[
+            df["Andamento"] == "Vistoria Feita"
+        ]
+
+    elif opcao_pendencia == "Cercons vencidos":
+
+        df_pendencias = df[
+            df["Validade_dt"] < hoje
+        ]
+
+    elif opcao_pendencia == "Cercons vencendo em 30 dias":
+
+        df_pendencias = df[
+            (df["Validade_dt"] >= hoje) &
+            (
+                df["Validade_dt"]
+                <= hoje + pd.Timedelta(days=30)
+            )
+        ]
+
+    else:
+
+        df_pendencias = pd.DataFrame()
+
+    # --------------------------------------------
+    # TOTAL ENCONTRADO
+    # --------------------------------------------
+
+    st.caption(
+        f"Total encontrado: {len(df_pendencias)}"
+    )
+
+    # --------------------------------------------
+    # COLUNAS EXIBIDAS
+    # --------------------------------------------
+
+    colunas_pendencias = [
+        "Data de Protocolo",
+        "Nº de Protocolo",
+        "Nome Fantasia",
+        "Cidade",
+        "Militar Responsável",
+        "Andamento"
+    ]
+
+    st.dataframe(
+        df_pendencias[colunas_pendencias],
+        use_container_width=True,
+        hide_index=True
+    )
