@@ -98,6 +98,7 @@ PAGINAS = {
         "novo_planalto": "Novo Planalto",
         "montividiu": "Montividiu",
         "mutunopolis": "Mutunópolis",
+        "relatorio_operacional": "Relatório Operacional"
     },
     "Militares": {
         "militares.dlauan": "Asp Of D'Lauan (Admin)",
@@ -111,7 +112,6 @@ PAGINAS = {
         "cadastro_funcionalidades": "Cadastro de Funcionalidades",
         "cadastro_permissoes": "Cadastro de Permissões",
         "painel_financeiro": "Painel Financeiro",
-        "relatorio_operacional": "Relatório Operacional",
         "atualizar_ids": "Atualizar IDs"
     }
 }
