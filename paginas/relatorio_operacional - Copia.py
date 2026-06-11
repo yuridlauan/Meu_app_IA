@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 
 from funcoes_compartilhadas.conversa_banco import select
-from funcoes_compartilhadas.gera_pdf_relatorio import gerar_pdf_relatorio
 
 # ---------------------------------------------------
 # CONFIGURAÇÕES
@@ -463,31 +462,4 @@ def app():
         df_pendencias[colunas_pendencias],
         use_container_width=True,
         hide_index=True
-    )
-
-    st.divider()
-
-    pdf = gerar_pdf_relatorio(
-        cidade=cidade,
-        mes=mes,
-        tipo_servico=tipo_servico,
-        opcao_pendencia=opcao_pendencia,
-        protocolos=protocolos,
-        vistorias=vistorias,
-        cercons=cercons,
-        nao_certificou=nao_certificou,
-        notificados=notificados,
-        protocolados=protocolados,
-        vistoria_sem_cercon=vistoria_sem_cercon,
-        cercons_vencidos=cercons_vencidos,
-        cercons_30=cercons_30,
-        df_protocolos=df_exibir
-    )
-
-    st.download_button(
-        label="📄 Exportar Relatório PDF",
-        data=pdf,
-        file_name=f"relatorio_operacional_{mes}.pdf",
-        mime="application/pdf",
-        use_container_width=True
     )
