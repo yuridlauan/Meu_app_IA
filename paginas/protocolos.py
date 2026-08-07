@@ -153,7 +153,7 @@ def formulario_protocolo(dados=None, prefix=""):
 
         contato = st.text_input("Contato", value=dados.get("Contato", ""), key=f"cont_{prefix}")
 
-        opcoes_militar = ["Asp Of D'Lauan", "2° Sgt Tamilla", "2° Sgt Ribeiro", "2° Sgt Éderson"]
+        opcoes_militar = ["Asp Of D'Lauan", "2° Sgt Tamilla", "2° Sgt Ribeiro", "2° Sgt Éderson","Sd Amanda"]
         militar_valor = dados.get("Militar Responsável") or opcoes_militar[0]
         militar_index = opcoes_militar.index(militar_valor) if militar_valor in opcoes_militar else 0
         militar = st.selectbox("Militar Responsável", opcoes_militar, index=militar_index, key=f"mil_{prefix}")
