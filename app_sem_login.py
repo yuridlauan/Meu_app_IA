@@ -104,7 +104,9 @@ PAGINAS = {
         "militares.dlauan": "Asp Of D'Lauan (Admin)",
         "militares.tamilla": "2° Sgt Tamilla",
         "militares.ribeiro": "2° Sgt Ribeiro",
-        "militares.ederson": "2° Sgt Éderson"
+        "militares.ederson": "2° Sgt Éderson",
+        "militares.amanda": "Sd Amanda"
+
     },
     "Administrador": {
         "cadastro_usuarios": "Cadastro de Usuários",
