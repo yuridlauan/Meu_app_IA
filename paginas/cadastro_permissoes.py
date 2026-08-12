@@ -64,23 +64,39 @@ def app():
     st.markdown("---")
     st.subheader("✅ Definir Permissões")
 
-    # Checkboxes para cada funcionalidade, agrupadas por menu
+    checkbox_keys = {
+        str(func["ID"]): f"check_{usuario_id}_{func['ID']}"
+        for _, func in df_funcionalidades.iterrows()
+    }
+
+    col1, col2 = st.columns([8, 2])
+    with col2:
+        selecionar_tudo = st.button("Selecionar Tudo")
+
+    if selecionar_tudo:
+        for key in checkbox_keys.values():
+            st.session_state[key] = True
+
+    # Checkboxes para cada funcionalidade, agrupadas por menu.
+    # O Streamlit não permite alterar st.session_state de uma chave depois que
+    # o widget correspondente já foi instanciado no mesmo ciclo de execução.
+    # Por isso o botão "Selecionar Tudo" é processado antes da criação dos
+    # checkboxes, e as chaves são separadas por usuário para evitar reaproveitar
+    # marcações ao trocar o usuário selecionado.
     selecao_check = {}
     with st.container(border=True):
         for _, menu in df_menus.iterrows():
             st.markdown(f"**{menu['Nome']}**")
             funcs = df_funcionalidades[df_funcionalidades["ID_Menu"] == menu["ID"]]
             for _, func in funcs.iterrows():
-                key = f"check_{func['ID']}"
-                marcado = (str(func["ID"]) in ids_func_atuais or st.session_state.get(key, False))
-                selecao_check[str(func["ID"])] = st.checkbox(f"{func['Nome']} [{func['Caminho']}]", value=marcado, key=key)
-
-    col1, col2 = st.columns([8, 2])
-    with col2:
-        if st.button("Selecionar Tudo"):
-            for _, func in df_funcionalidades.iterrows():
-                st.session_state[f"check_{func['ID']}"] = True
-            st.experimental_rerun()
+                func_id = str(func["ID"])
+                key = checkbox_keys[func_id]
+                marcado = func_id in ids_func_atuais
+                selecao_check[func_id] = st.checkbox(
+                    f"{func['Nome']} [{func['Caminho']}]",
+                    value=marcado,
+                    key=key,
+                )
 
     if st.button("💾 Salvar Permissões"):
         # Apaga permissões antigas desse usuário
