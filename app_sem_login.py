@@ -101,7 +101,7 @@ PAGINAS = {
         "relatorio_operacional": "Relatório Operacional"
     },
     "Militares": {
-        "militares.dlauan": "Asp Of D'Lauan (Admin)",
+        "militares.dlauan": "2° Ten D'Lauan (Admin)",
         "militares.tamilla": "2° Sgt Tamilla",
         "militares.ribeiro": "2° Sgt Ribeiro",
         "militares.ederson": "2° Sgt Éderson",
