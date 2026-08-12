@@ -71,16 +71,15 @@ def app():
             st.markdown(f"**{menu['Nome']}**")
             funcs = df_funcionalidades[df_funcionalidades["ID_Menu"] == menu["ID"]]
             for _, func in funcs.iterrows():
-                key = f"check_{func['ID']}"
-                marcado = (str(func["ID"]) in ids_func_atuais or st.session_state.get(key, False))
-                selecao_check[str(func["ID"])] = st.checkbox(f"{func['Nome']} [{func['Caminho']}]", value=marcado, key=key)
+                func_id = str(func["ID"])
+                key = checkbox_keys[func_id]
+                marcado = func_id in ids_func_atuais
+                selecao_check[func_id] = st.checkbox(
+                    f"{func['Nome']} [{func['Caminho']}]",
+                    value=marcado,
+                    key=key,
+                )
 
-    col1, col2 = st.columns([8, 2])
-    with col2:
-        if st.button("Selecionar Tudo"):
-            for _, func in df_funcionalidades.iterrows():
-                st.session_state[f"check_{func['ID']}"] = True
-            st.experimental_rerun()
 
     if st.button("💾 Salvar Permissões"):
         # Apaga permissões antigas desse usuário
